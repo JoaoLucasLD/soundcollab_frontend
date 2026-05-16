@@ -7,6 +7,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+.env
+.env.*
+!.env.example
+
 node_modules
 dist
 dist-ssr
@@ -16,6 +20,9 @@ dist-ssr
 test-results/
 playwright-report/
 blob-report/
+playwright.config.ts
+run-visual-tests.ps1
+visual.spec.ts
 
 # Editor directories and files
 .vscode/*
@@ -27,3 +34,6 @@ blob-report/
 *.njsproj
 *.sln
 *.sw?
+
+
+mock-musicians.ts
