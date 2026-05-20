@@ -1,8 +1,9 @@
 export type Musician = {
   id: string
+  userId?: string
   name: string
-  age: number
-  gender: string
+  age?: number
+  gender?: string
   city: string
   experience: string
   instruments: string[]

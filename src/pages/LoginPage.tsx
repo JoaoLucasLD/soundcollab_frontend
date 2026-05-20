@@ -47,8 +47,8 @@ export function LoginPage() {
     },
     onError: (error) => {
       const message = axios.isAxiosError(error)
-        ? error.response?.data?.message ?? 'Nao foi possível entrar com essas credenciais.'
-        : 'Nao foi possível entrar agora.'
+        ? error.response?.data?.message ?? 'Não foi possível entrar com essas credenciais.'
+        : 'Não foi possível entrar agora.'
 
       setError('root', { message })
     },
