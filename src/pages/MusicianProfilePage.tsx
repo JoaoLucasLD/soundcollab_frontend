@@ -5,14 +5,14 @@ import { Link, useParams } from 'react-router-dom'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Tag } from '../components/ui/Tag'
 import { useCurrentUser } from '../hooks/useCurrentUser'
+import { getGenderLabel } from '../lib/gender'
 import { capitalizeDisplayName } from '../lib/text-format'
 import { createCollaboration } from '../services/collaboration.service'
-import { getProfileByUserId } from '../services/profile.service'
+import { getProfileByIdentifier } from '../services/profile.service'
 
 export function MusicianProfilePage() {
-  const { userId } = useParams<{ userId: string }>()
+  const { userId: profileIdentifier } = useParams<{ userId: string }>()
   const { data: currentUser } = useCurrentUser()
-  const isOwnProfile = Boolean(userId && currentUser?.id === userId)
 
   const {
     data: profile,
@@ -20,26 +20,28 @@ export function MusicianProfilePage() {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ['profiles', 'user', userId],
-    queryFn: () => getProfileByUserId(userId ?? ''),
-    enabled: Boolean(userId),
+    queryKey: ['profiles', 'identifier', profileIdentifier],
+    queryFn: () => getProfileByIdentifier(profileIdentifier ?? ''),
+    enabled: Boolean(profileIdentifier),
     staleTime: 1000 * 60 * 2,
   })
+  const isOwnProfile = Boolean(profile?.userId && currentUser?.id === profile.userId)
 
   const createCollaborationMutation = useMutation({
     mutationFn: createCollaboration,
   })
 
   function handleConnect() {
-    if (!userId) {
+    if (!profile?.userId) {
       return
     }
 
-    createCollaborationMutation.mutate({ receiverId: userId })
+    createCollaborationMutation.mutate({ receiverId: profile.userId })
   }
 
   const about = profile?.bio || profile?.preferences || 'Perfil musical em construção.'
   const mainInstrument = profile?.instruments[0] ?? 'Música'
+  const gender = getGenderLabel(profile?.gender)
 
   return (
     <>
@@ -97,6 +99,7 @@ export function MusicianProfilePage() {
                   <Trophy className="text-[#1DC95A]" size={17} />
                   {formatExperience(profile.experience)}
                 </p>
+                <p className="text-zinc-400">{gender}</p>
               </div>
 
               <button

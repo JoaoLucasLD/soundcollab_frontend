@@ -7,11 +7,13 @@ import { LoginPage } from './pages/LoginPage'
 import { MusicianProfilePage } from './pages/MusicianProfilePage'
 import { OnboardingProfilePage } from './pages/OnboardingProfilePage'
 import { ProfilePage } from './pages/ProfilePage'
+import { SignupPage } from './pages/SignupPage'
 
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/cadastro" element={<SignupPage />} />
       <Route element={<RequireAuth />}>
         <Route path="/onboarding/perfil" element={<OnboardingProfilePage />} />
         <Route element={<AppLayout />}>

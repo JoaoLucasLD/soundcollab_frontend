@@ -1,9 +1,10 @@
-import type { CollaborationGoal } from './profile'
+import type { CollaborationGoal, Gender } from './profile'
 
 export type UserProfile = {
   id: string
   displayName: string
   city: string | null
+  gender: Gender | null
   experience: number | null
   preferences: string | null
   bio: string | null

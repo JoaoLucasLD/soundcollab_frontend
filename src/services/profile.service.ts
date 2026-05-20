@@ -11,6 +11,19 @@ export async function getProfileByUserId(userId: string) {
   return data
 }
 
+export async function getProfileById(profileId: string) {
+  const { data } = await api.get<ProfileResponse>(`/profiles/${profileId}`)
+  return data
+}
+
+export async function getProfileByIdentifier(identifier: string) {
+  try {
+    return await getProfileByUserId(identifier)
+  } catch {
+    return getProfileById(identifier)
+  }
+}
+
 export async function updateMyProfile(payload: UpdateProfilePayload) {
   const { data } = await api.patch<ProfileResponse>('/profiles/me', payload)
   return data

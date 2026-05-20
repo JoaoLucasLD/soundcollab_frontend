@@ -10,6 +10,7 @@ import { Tag } from '../components/ui/Tag'
 import { useInstruments, useStyles } from '../hooks/useCatalogs'
 import { currentUserQueryKey, useCurrentUser } from '../hooks/useCurrentUser'
 import { collaborationGoalOptions, getCollaborationGoalLabel } from '../lib/collaboration-goals'
+import { genderOptions, getGenderLabel } from '../lib/gender'
 import { capitalizeDisplayName } from '../lib/text-format'
 import { getMe } from '../services/auth.service'
 import { replaceMyInstruments, replaceMyStyles, updateMyProfile } from '../services/profile.service'
@@ -19,6 +20,7 @@ import type { CurrentUser } from '../types/user'
 const profileSchema = z.object({
   displayName: z.string().trim().min(2, 'Informe pelo menos 2 caracteres.').max(80, 'Use no máximo 80 caracteres.'),
   city: z.string().trim().max(120, 'Use no máximo 120 caracteres.').optional(),
+  gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY']),
   experience: z.coerce
     .number()
     .int('Informe um número inteiro.')
@@ -44,6 +46,7 @@ export function ProfilePage() {
   const profile = currentUser?.profile
   const displayName = profile?.displayName || currentUser?.email || 'Você'
   const city = profile?.city || 'Localização não informada'
+  const gender = getGenderLabel(profile?.gender)
   const experienceYears = profile?.experience
   const instruments = profile?.instruments ?? []
   const styles = profile?.styles ?? []
@@ -62,6 +65,7 @@ export function ProfilePage() {
     defaultValues: {
       displayName: profile?.displayName ?? '',
       city: profile?.city ?? '',
+      gender: profile?.gender ?? 'PREFER_NOT_TO_SAY',
       experience: profile?.experience ?? 0,
       preferences: profile?.preferences ?? '',
       bio: profile?.bio ?? '',
@@ -77,6 +81,7 @@ export function ProfilePage() {
         updateMyProfile({
           displayName: values.displayName,
           city: values.city || undefined,
+          gender: values.gender,
           experience: values.experience,
           preferences: values.preferences || undefined,
           bio: values.bio || undefined,
@@ -120,6 +125,7 @@ export function ProfilePage() {
     reset({
       displayName: profile?.displayName ?? '',
       city: profile?.city ?? '',
+      gender: profile?.gender ?? 'PREFER_NOT_TO_SAY',
       experience: profile?.experience ?? 0,
       preferences: profile?.preferences ?? '',
       bio: profile?.bio ?? profile?.preferences ?? '',
@@ -148,6 +154,7 @@ export function ProfilePage() {
         if (
           field === 'displayName' ||
           field === 'city' ||
+          field === 'gender' ||
           field === 'experience' ||
           field === 'preferences' ||
           field === 'bio' ||
@@ -201,6 +208,19 @@ export function ProfilePage() {
                 placeholder="São Paulo, SP"
                 {...register('city')}
               />
+            </FormField>
+
+            <FormField label="Gênero" error={errors.gender?.message}>
+              <select
+                className="w-full rounded-lg border border-zinc-700 bg-[#141414] px-3 py-3 text-sm text-white outline-none transition focus:border-[#1DC95A] focus:ring-2 focus:ring-[#1DC95A]/20"
+                {...register('gender')}
+              >
+                {genderOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </FormField>
 
             <FormField label="Anos de experiência" error={errors.experience?.message}>
@@ -288,6 +308,10 @@ export function ProfilePage() {
 
           <ProfileInfoCard icon={<MapPin className="text-[#1DC95A]" size={22} />} title="Localização">
             <p>{city}</p>
+          </ProfileInfoCard>
+
+          <ProfileInfoCard icon={<Target className="text-[#1DC95A]" size={22} />} title="Gênero">
+            <p>{gender}</p>
           </ProfileInfoCard>
 
           <ProfileInfoCard icon={<Trophy className="text-[#1DC95A]" size={22} />} title="Experiência Musical">

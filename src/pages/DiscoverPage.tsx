@@ -5,12 +5,16 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { useInstruments, useStyles } from '../hooks/useCatalogs'
 import { useCreateCollaboration } from '../hooks/useCollaborations'
 import { useDiscoveryMusicians } from '../hooks/useDiscoveryMusicians'
+import { genderOptions, getGenderLabel } from '../lib/gender'
 import type { DiscoveryMusicianResponse } from '../types/discovery'
 import type { Musician } from '../types/musician'
+import type { Gender } from '../types/profile'
 
 const allInstrumentsOption = 'Todos'
 const allStylesOption = 'Todos'
 const allCitiesOption = 'Todas'
+const allGendersOption = 'Todos' as const
+type GenderFilter = Gender | typeof allGendersOption
 
 const photoTones = [
   'from-[#1DC95A] via-[#18592F] to-[#141414]',
@@ -24,6 +28,7 @@ export function DiscoverPage() {
   const [instrumentFilter, setInstrumentFilter] = useState(allInstrumentsOption)
   const [styleFilter, setStyleFilter] = useState(allStylesOption)
   const [cityFilter, setCityFilter] = useState(allCitiesOption)
+  const [genderFilter, setGenderFilter] = useState<GenderFilter>(allGendersOption)
   const [connectingUserId, setConnectingUserId] = useState<string | null>(null)
   const [collaborationMessage, setCollaborationMessage] = useState<string | null>(null)
 
@@ -36,8 +41,9 @@ export function DiscoverPage() {
       ...(instrumentFilter !== allInstrumentsOption ? { instrument: instrumentFilter } : {}),
       ...(styleFilter !== allStylesOption ? { style: styleFilter } : {}),
       ...(cityFilter !== allCitiesOption ? { city: cityFilter } : {}),
+      ...(genderFilter !== allGendersOption ? { gender: genderFilter } : {}),
     }),
-    [cityFilter, instrumentFilter, styleFilter],
+    [cityFilter, genderFilter, instrumentFilter, styleFilter],
   )
 
   const {
@@ -75,6 +81,11 @@ export function DiscoverPage() {
     return [allCitiesOption, ...Array.from(cities).sort((left, right) => left.localeCompare(right))]
   }, [cityFilter, musicians])
 
+  const genderSelectOptions = useMemo(
+    () => [allGendersOption, ...genderOptions.map((option) => option.value)],
+    [],
+  )
+
   const filteredMusicians = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
 
@@ -95,22 +106,26 @@ export function DiscoverPage() {
         instrumentFilter === allInstrumentsOption || musician.instruments.includes(instrumentFilter)
       const matchesStyle = styleFilter === allStylesOption || musician.styles.includes(styleFilter)
       const matchesCity = cityFilter === allCitiesOption || musician.city === cityFilter
+      const matchesGender =
+        genderFilter === allGendersOption || musician.gender === getGenderLabel(genderFilter as Gender)
 
-      return matchesSearch && matchesInstrument && matchesStyle && matchesCity
+      return matchesSearch && matchesInstrument && matchesStyle && matchesCity && matchesGender
     })
-  }, [cityFilter, instrumentFilter, musicians, searchTerm, styleFilter])
+  }, [cityFilter, genderFilter, instrumentFilter, musicians, searchTerm, styleFilter])
 
   const hasFilters =
     searchTerm.trim().length > 0 ||
     instrumentFilter !== allInstrumentsOption ||
     styleFilter !== allStylesOption ||
-    cityFilter !== allCitiesOption
+    cityFilter !== allCitiesOption ||
+    genderFilter !== allGendersOption
 
   function clearFilters() {
     setSearchTerm('')
     setInstrumentFilter(allInstrumentsOption)
     setStyleFilter(allStylesOption)
     setCityFilter(allCitiesOption)
+    setGenderFilter(allGendersOption)
   }
 
   function handleConnect(musician: Musician) {
@@ -171,6 +186,13 @@ export function DiscoverPage() {
           />
           <FilterSelect label="Estilo" value={styleFilter} options={styleOptions} onChange={setStyleFilter} />
           <FilterSelect label="Cidade" value={cityFilter} options={cityOptions} onChange={setCityFilter} />
+          <FilterSelect
+            label="Gênero"
+            value={genderFilter}
+            options={genderSelectOptions}
+            formatOption={(option) => (option === allGendersOption ? option : getGenderLabel(option as Gender))}
+            onChange={(value) => setGenderFilter(value as GenderFilter)}
+          />
 
           <button
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-bold text-zinc-100 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -248,6 +270,7 @@ function mapDiscoveryItemToMusician(item: DiscoveryMusicianResponse, index: numb
     id: item.id,
     userId: item.userId,
     name: item.displayName,
+    gender: getGenderLabel(item.gender),
     city: item.city ?? 'Cidade não informada',
     experience: formatExperience(item.experience),
     instruments: item.instruments,
@@ -290,10 +313,11 @@ type FilterSelectProps = {
   label: string
   value: string
   options: string[]
+  formatOption?: (option: string) => string
   onChange: (value: string) => void
 }
 
-function FilterSelect({ label, value, options, onChange }: FilterSelectProps) {
+function FilterSelect({ label, value, options, formatOption = (option) => option, onChange }: FilterSelectProps) {
   return (
     <label className="min-w-40">
       <span className="mb-2 block text-sm font-semibold text-zinc-100">{label}</span>
@@ -303,7 +327,9 @@ function FilterSelect({ label, value, options, onChange }: FilterSelectProps) {
         onChange={(event) => onChange(event.target.value)}
       >
         {options.map((option) => (
-          <option key={option}>{option}</option>
+          <option key={option} value={option}>
+            {formatOption(option)}
+          </option>
         ))}
       </select>
     </label>

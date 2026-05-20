@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { useInstruments, useStyles } from '../hooks/useCatalogs'
 import { currentUserQueryKey, useCurrentUser } from '../hooks/useCurrentUser'
 import { collaborationGoalOptions } from '../lib/collaboration-goals'
+import { genderOptions } from '../lib/gender'
 import { isProfileComplete } from '../lib/profile-completion'
 import { capitalizeDisplayName } from '../lib/text-format'
 import { getMe } from '../services/auth.service'
@@ -27,6 +28,9 @@ const collaborationGoalValues = [
 const onboardingSchema = z.object({
   displayName: z.string().trim().min(2, 'Informe pelo menos 2 caracteres.').max(80, 'Use no máximo 80 caracteres.'),
   city: z.string().trim().min(2, 'Informe sua cidade.').max(120, 'Use no máximo 120 caracteres.'),
+  gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY'], {
+    message: 'Selecione seu gênero.',
+  }),
   experience: z.coerce
     .number()
     .int('Informe um número inteiro.')
@@ -50,7 +54,7 @@ const onboardingSteps: OnboardingStep[] = [
   {
     title: 'Informações iniciais',
     description: 'Comece com as informações que ajudam outros músicos a reconhecerem você.',
-    fields: ['displayName', 'city', 'experience'],
+    fields: ['displayName', 'city', 'gender', 'experience'],
   },
   {
     title: 'Sobre a colaboração',
@@ -89,6 +93,7 @@ export function OnboardingProfilePage() {
     defaultValues: {
       displayName: currentUser?.profile?.displayName ?? '',
       city: currentUser?.profile?.city ?? '',
+      gender: currentUser?.profile?.gender ?? 'PREFER_NOT_TO_SAY',
       experience: currentUser?.profile?.experience ?? 0,
       bio: '',
       collaborationGoals: [],
@@ -108,6 +113,7 @@ export function OnboardingProfilePage() {
     reset({
       displayName: profile.displayName ?? '',
       city: profile.city ?? '',
+      gender: profile.gender ?? 'PREFER_NOT_TO_SAY',
       experience: profile.experience ?? 0,
       bio: profile.bio ?? profile.preferences ?? '',
       collaborationGoals: profile.collaborationGoals ?? [],
@@ -124,6 +130,7 @@ export function OnboardingProfilePage() {
         updateMyProfile({
           displayName: values.displayName,
           city: values.city,
+          gender: values.gender,
           experience: values.experience,
           bio: values.bio || undefined,
           collaborationGoals: values.collaborationGoals,
@@ -278,6 +285,19 @@ export function OnboardingProfilePage() {
                     placeholder="Itajubá, MG"
                     {...register('city')}
                   />
+                </FormField>
+
+                <FormField label="Gênero" error={errors.gender?.message}>
+                  <select
+                    className="w-full rounded-lg border border-zinc-700 bg-[#141414] px-3 py-3 text-sm text-white outline-none transition focus:border-[#1DC95A] focus:ring-2 focus:ring-[#1DC95A]/20"
+                    {...register('gender')}
+                  >
+                    {genderOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </FormField>
 
                 <FormField label="Anos de experiência" error={errors.experience?.message}>
@@ -668,6 +688,7 @@ function isOnboardingField(field: unknown): field is OnboardingField {
   return (
     field === 'displayName' ||
     field === 'city' ||
+    field === 'gender' ||
     field === 'experience' ||
     field === 'bio' ||
     field === 'collaborationGoals' ||

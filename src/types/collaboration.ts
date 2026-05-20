@@ -6,6 +6,7 @@ export type CollaborationProfileSummary = {
   userId: string
   displayName: string
   city: string | null
+  gender: Gender | null
   instruments: string[]
   styles: string[]
 }
@@ -35,3 +36,4 @@ export type ListCollaborationsResponse = {
 export type CreateCollaborationPayload = {
   receiverId: string
 }
+import type { Gender } from './profile'
