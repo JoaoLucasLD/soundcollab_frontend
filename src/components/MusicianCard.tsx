@@ -1,16 +1,25 @@
-import { Heart, MapPin, Sparkles, Trophy, UserRound } from 'lucide-react'
+import { Check, Heart, MailCheck, MapPin, MessageCircle, Sparkles, Trophy, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import type { MusicianCollaborationState } from '../lib/collaboration-state'
 import { capitalizeDisplayName } from '../lib/text-format'
 import type { Musician } from '../types/musician'
 import { Tag } from './ui/Tag'
 
 type MusicianCardProps = {
   musician: Musician
+  collaborationState?: MusicianCollaborationState
   isConnecting?: boolean
   onConnect?: (musician: Musician) => void
 }
 
-export function MusicianCard({ musician, isConnecting = false, onConnect }: MusicianCardProps) {
+export function MusicianCard({
+  musician,
+  collaborationState = 'NONE',
+  isConnecting = false,
+  onConnect,
+}: MusicianCardProps) {
+  const connectButton = getConnectButtonState(collaborationState, isConnecting)
+
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-lg border border-zinc-800 bg-[#181818] shadow-sm shadow-black/30">
       <div className={`relative aspect-[4/3] overflow-hidden bg-gradient-to-br ${musician.photoTone}`}>
@@ -71,17 +80,43 @@ export function MusicianCard({ musician, isConnecting = false, onConnect }: Musi
             <UserRound size={17} />
             Ver perfil
           </Link>
-          <button
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1DC95A] px-4 py-3 text-sm font-bold text-[#141414] shadow-sm transition hover:bg-[#1CB352] disabled:cursor-not-allowed disabled:opacity-70"
-            disabled={isConnecting || !musician.userId}
-            onClick={() => onConnect?.(musician)}
-            type="button"
-          >
-            <Heart size={17} />
-            {isConnecting ? 'Enviando...' : 'Conectar'}
-          </button>
+          {collaborationState === 'PENDING_RECEIVED' ? (
+            <Link
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#1DC95A]/70 bg-[#1DC95A]/10 px-4 py-3 text-sm font-bold text-[#1DC95A] transition hover:bg-[#1DC95A]/15"
+              to="/colaboracoes"
+            >
+              <MessageCircle size={17} />
+              Responder
+            </Link>
+          ) : (
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1DC95A] px-4 py-3 text-sm font-bold text-[#141414] shadow-sm transition hover:bg-[#1CB352] disabled:cursor-not-allowed disabled:opacity-70"
+              disabled={connectButton.disabled || !musician.userId}
+              onClick={() => onConnect?.(musician)}
+              type="button"
+            >
+              {connectButton.icon}
+              {connectButton.label}
+            </button>
+          )}
         </div>
       </div>
     </article>
   )
+}
+
+function getConnectButtonState(collaborationState: MusicianCollaborationState, isConnecting: boolean) {
+  if (isConnecting) {
+    return { disabled: true, icon: <Heart size={17} />, label: 'Enviando...' }
+  }
+
+  if (collaborationState === 'PENDING_SENT') {
+    return { disabled: true, icon: <MailCheck size={17} />, label: 'Enviado' }
+  }
+
+  if (collaborationState === 'ACCEPTED') {
+    return { disabled: true, icon: <Check size={17} />, label: 'Conectado' }
+  }
+
+  return { disabled: false, icon: <Heart size={17} />, label: 'Conectar' }
 }

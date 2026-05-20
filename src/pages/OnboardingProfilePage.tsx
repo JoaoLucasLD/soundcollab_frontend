@@ -7,6 +7,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { useInstruments, useStyles } from '../hooks/useCatalogs'
 import { currentUserQueryKey, useCurrentUser } from '../hooks/useCurrentUser'
+import { availabilityPeriodOptions, availabilityTimeOptions } from '../lib/availability'
 import { collaborationGoalOptions } from '../lib/collaboration-goals'
 import { genderOptions } from '../lib/gender'
 import { isProfileComplete } from '../lib/profile-completion'
@@ -24,6 +25,8 @@ const collaborationGoalValues = [
   'STUDY',
   'CASUAL_JAM',
 ] as const
+const availabilityPeriodValues = ['WEEKDAYS', 'WEEKENDS'] as const
+const availabilityTimeValues = ['MORNING', 'AFTERNOON', 'EVENING'] as const
 
 const onboardingSchema = z.object({
   displayName: z.string().trim().min(2, 'Informe pelo menos 2 caracteres.').max(80, 'Use no máximo 80 caracteres.'),
@@ -38,6 +41,9 @@ const onboardingSchema = z.object({
     .max(100, 'Informe até 100 anos.'),
   bio: z.string().trim().max(500, 'Use no máximo 500 caracteres.').optional(),
   collaborationGoals: z.array(z.enum(collaborationGoalValues)).max(7),
+  availabilityPeriods: z.array(z.enum(availabilityPeriodValues)).max(2),
+  availabilityTimes: z.array(z.enum(availabilityTimeValues)).max(3),
+  availabilityNotes: z.string().trim().max(300, 'Use no máximo 300 caracteres.').optional(),
   instrumentIds: z.array(z.string()).min(1, 'Escolha pelo menos um instrumento.').max(20),
   styleIds: z.array(z.string()).min(1, 'Escolha pelo menos um estilo.').max(20),
 })
@@ -58,8 +64,8 @@ const onboardingSteps: OnboardingStep[] = [
   },
   {
     title: 'Sobre a colaboração',
-    description: 'Conte um pouco sobre você e marque o tipo de projeto que procura.',
-    fields: ['bio', 'collaborationGoals'],
+    description: 'Conte um pouco sobre você, o tipo de projeto que procura e sua disponibilidade.',
+    fields: ['bio', 'collaborationGoals', 'availabilityPeriods', 'availabilityTimes', 'availabilityNotes'],
   },
   {
     title: 'Som musical',
@@ -97,6 +103,9 @@ export function OnboardingProfilePage() {
       experience: currentUser?.profile?.experience ?? 0,
       bio: '',
       collaborationGoals: [],
+      availabilityPeriods: [],
+      availabilityTimes: [],
+      availabilityNotes: '',
       instrumentIds: [],
       styleIds: [],
     },
@@ -117,6 +126,9 @@ export function OnboardingProfilePage() {
       experience: profile.experience ?? 0,
       bio: profile.bio ?? profile.preferences ?? '',
       collaborationGoals: profile.collaborationGoals ?? [],
+      availabilityPeriods: profile.availabilityPeriods ?? [],
+      availabilityTimes: profile.availabilityTimes ?? [],
+      availabilityNotes: profile.availabilityNotes ?? '',
       instrumentIds: instruments
         .filter((instrument) => profile.instruments.includes(instrument.name))
         .map((instrument) => instrument.id),
@@ -134,6 +146,9 @@ export function OnboardingProfilePage() {
           experience: values.experience,
           bio: values.bio || undefined,
           collaborationGoals: values.collaborationGoals,
+          availabilityPeriods: values.availabilityPeriods,
+          availabilityTimes: values.availabilityTimes,
+          availabilityNotes: values.availabilityNotes || undefined,
         }),
         replaceMyInstruments({ instrumentIds: values.instrumentIds }),
         replaceMyStyles({ styleIds: values.styleIds }),
@@ -323,6 +338,13 @@ export function OnboardingProfilePage() {
                 </FormField>
 
                 <GoalChoiceGroup error={errors.collaborationGoals?.message} register={register} />
+
+                <AvailabilityChoiceGroup
+                  notesError={errors.availabilityNotes?.message}
+                  periodsError={errors.availabilityPeriods?.message}
+                  register={register}
+                  timesError={errors.availabilityTimes?.message}
+                />
               </div>
             ) : null}
 
@@ -471,6 +493,79 @@ function GoalChoiceGroup({ error, register }: GoalChoiceGroupProps) {
         ))}
       </div>
       {error ? <p className="mt-2 text-sm text-red-300">{error}</p> : null}
+    </fieldset>
+  )
+}
+
+type AvailabilityChoiceGroupProps = {
+  notesError?: string
+  periodsError?: string
+  register: UseFormRegister<OnboardingFormValues>
+  timesError?: string
+}
+
+function AvailabilityChoiceGroup({
+  notesError,
+  periodsError,
+  register,
+  timesError,
+}: AvailabilityChoiceGroupProps) {
+  return (
+    <fieldset className="min-w-0 rounded-lg border border-zinc-800 bg-[#141414] p-4">
+      <legend className="px-1 text-sm font-semibold text-zinc-100">Disponibilidade</legend>
+      <div className="mt-3 grid gap-4 lg:grid-cols-2">
+        <div>
+          <p className="mb-2 text-sm font-semibold text-zinc-200">Períodos</p>
+          <div className="flex flex-wrap gap-2">
+            {availabilityPeriodOptions.map((period) => (
+              <label
+                className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-800"
+                key={period.value}
+              >
+                <input
+                  className="size-4 accent-[#1DC95A]"
+                  type="checkbox"
+                  value={period.value}
+                  {...register('availabilityPeriods')}
+                />
+                {period.label}
+              </label>
+            ))}
+          </div>
+          {periodsError ? <p className="mt-2 text-sm text-red-300">{periodsError}</p> : null}
+        </div>
+
+        <div>
+          <p className="mb-2 text-sm font-semibold text-zinc-200">Turnos</p>
+          <div className="flex flex-wrap gap-2">
+            {availabilityTimeOptions.map((time) => (
+              <label
+                className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-800"
+                key={time.value}
+              >
+                <input
+                  className="size-4 accent-[#1DC95A]"
+                  type="checkbox"
+                  value={time.value}
+                  {...register('availabilityTimes')}
+                />
+                {time.label}
+              </label>
+            ))}
+          </div>
+          {timesError ? <p className="mt-2 text-sm text-red-300">{timesError}</p> : null}
+        </div>
+      </div>
+
+      <label className="mt-4 block">
+        <span className="mb-2 block text-sm font-semibold text-zinc-100">Observação</span>
+        <textarea
+          className="min-h-24 w-full resize-y rounded-lg border border-zinc-700 bg-[#181818] px-3 py-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-[#1DC95A] focus:ring-2 focus:ring-[#1DC95A]/20"
+          placeholder="Ex.: durante a semana só depois das 19h."
+          {...register('availabilityNotes')}
+        />
+      </label>
+      {notesError ? <p className="mt-2 text-sm text-red-300">{notesError}</p> : null}
     </fieldset>
   )
 }
@@ -692,6 +787,9 @@ function isOnboardingField(field: unknown): field is OnboardingField {
     field === 'experience' ||
     field === 'bio' ||
     field === 'collaborationGoals' ||
+    field === 'availabilityPeriods' ||
+    field === 'availabilityTimes' ||
+    field === 'availabilityNotes' ||
     field === 'instrumentIds' ||
     field === 'styleIds'
   )

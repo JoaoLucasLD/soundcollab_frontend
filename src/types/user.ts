@@ -1,4 +1,4 @@
-import type { CollaborationGoal, Gender } from './profile'
+import type { AvailabilityPeriod, AvailabilityTime, CollaborationGoal, Gender } from './profile'
 
 export type UserProfile = {
   id: string
@@ -9,6 +9,9 @@ export type UserProfile = {
   preferences: string | null
   bio: string | null
   collaborationGoals: CollaborationGoal[]
+  availabilityPeriods: AvailabilityPeriod[]
+  availabilityTimes: AvailabilityTime[]
+  availabilityNotes: string | null
   instruments: string[]
   styles: string[]
 }

@@ -6,7 +6,7 @@ import { clearAuthToken } from '../../lib/api'
 
 const navigationItems = [
   { to: '/descobrir', label: 'Descobrir', icon: Home },
-  { to: '/colaboracoes', label: 'Colaboracoes', icon: Heart },
+  { to: '/colaboracoes', label: 'Colaborações', icon: Heart },
   { to: '/perfil', label: 'Perfil', icon: UserRound },
 ]
 

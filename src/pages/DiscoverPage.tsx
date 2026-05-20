@@ -3,8 +3,9 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { MusicianCard } from '../components/MusicianCard'
 import { PageHeader } from '../components/ui/PageHeader'
 import { useInstruments, useStyles } from '../hooks/useCatalogs'
-import { useCreateCollaboration } from '../hooks/useCollaborations'
+import { useCollaborations, useCreateCollaboration } from '../hooks/useCollaborations'
 import { useDiscoveryMusicians } from '../hooks/useDiscoveryMusicians'
+import { getCollaborationStateForUser } from '../lib/collaboration-state'
 import { genderOptions, getGenderLabel } from '../lib/gender'
 import type { DiscoveryMusicianResponse } from '../types/discovery'
 import type { Musician } from '../types/musician'
@@ -34,7 +35,9 @@ export function DiscoverPage() {
 
   const { data: catalogInstruments = [] } = useInstruments()
   const { data: catalogStyles = [] } = useStyles()
+  const { data: collaborationsResult } = useCollaborations()
   const createCollaborationMutation = useCreateCollaboration()
+  const collaborations = collaborationsResult?.items ?? []
 
   const discoveryFilters = useMemo(
     () => ({
@@ -236,6 +239,7 @@ export function DiscoverPage() {
         <section className="grid items-stretch gap-6 xl:grid-cols-3">
           {filteredMusicians.map((musician) => (
             <MusicianCard
+              collaborationState={getCollaborationStateForUser(collaborations, musician.userId)}
               key={musician.id}
               isConnecting={connectingUserId === musician.userId}
               musician={musician}

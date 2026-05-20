@@ -1,18 +1,34 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Heart, MapPin, Music, Sparkles, Target, Trophy } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import {
+  ArrowLeft,
+  CalendarDays,
+  Check,
+  Heart,
+  MailCheck,
+  MapPin,
+  MessageCircle,
+  Music,
+  Sparkles,
+  Target,
+  Trophy,
+} from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Tag } from '../components/ui/Tag'
+import { useCollaborations, useCreateCollaboration } from '../hooks/useCollaborations'
 import { useCurrentUser } from '../hooks/useCurrentUser'
+import { formatAvailabilitySummary } from '../lib/availability'
+import { getCollaborationStateForUser, type MusicianCollaborationState } from '../lib/collaboration-state'
 import { getGenderLabel } from '../lib/gender'
 import { capitalizeDisplayName } from '../lib/text-format'
-import { createCollaboration } from '../services/collaboration.service'
 import { getProfileByIdentifier } from '../services/profile.service'
 
 export function MusicianProfilePage() {
   const { userId: profileIdentifier } = useParams<{ userId: string }>()
   const { data: currentUser } = useCurrentUser()
+  const { data: collaborationsResult } = useCollaborations()
+  const collaborations = collaborationsResult?.items ?? []
 
   const {
     data: profile,
@@ -27,9 +43,7 @@ export function MusicianProfilePage() {
   })
   const isOwnProfile = Boolean(profile?.userId && currentUser?.id === profile.userId)
 
-  const createCollaborationMutation = useMutation({
-    mutationFn: createCollaboration,
-  })
+  const createCollaborationMutation = useCreateCollaboration()
 
   function handleConnect() {
     if (!profile?.userId) {
@@ -42,6 +56,13 @@ export function MusicianProfilePage() {
   const about = profile?.bio || profile?.preferences || 'Perfil musical em construção.'
   const mainInstrument = profile?.instruments[0] ?? 'Música'
   const gender = getGenderLabel(profile?.gender)
+  const availabilitySummary = formatAvailabilitySummary(
+    profile?.availabilityPeriods ?? [],
+    profile?.availabilityTimes ?? [],
+    profile?.availabilityNotes,
+  )
+  const collaborationState = getCollaborationStateForUser(collaborations, profile?.userId)
+  const connectButton = getConnectButtonState(collaborationState, createCollaborationMutation.isPending)
 
   return (
     <>
@@ -102,15 +123,25 @@ export function MusicianProfilePage() {
                 <p className="text-zinc-400">{gender}</p>
               </div>
 
-              <button
-                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#1DC95A] px-4 py-3 text-sm font-bold text-[#141414] transition hover:bg-[#1CB352] disabled:cursor-not-allowed disabled:opacity-70"
-                disabled={isOwnProfile || createCollaborationMutation.isPending}
-                onClick={handleConnect}
-                type="button"
-              >
-                <Heart size={17} />
-                {createCollaborationMutation.isPending ? 'Enviando...' : 'Conectar'}
-              </button>
+              {collaborationState === 'PENDING_RECEIVED' ? (
+                <Link
+                  className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#1DC95A]/70 bg-[#1DC95A]/10 px-4 py-3 text-sm font-bold text-[#1DC95A] transition hover:bg-[#1DC95A]/15"
+                  to="/colaboracoes"
+                >
+                  <MessageCircle size={17} />
+                  Responder convite
+                </Link>
+              ) : (
+                <button
+                  className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#1DC95A] px-4 py-3 text-sm font-bold text-[#141414] transition hover:bg-[#1CB352] disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={isOwnProfile || connectButton.disabled}
+                  onClick={handleConnect}
+                  type="button"
+                >
+                  {connectButton.icon}
+                  {connectButton.label}
+                </button>
+              )}
 
               {isOwnProfile ? <p className="mt-3 text-sm text-zinc-400">Este é o seu perfil.</p> : null}
               {createCollaborationMutation.isSuccess ? (
@@ -136,11 +167,35 @@ export function MusicianProfilePage() {
             <ProfileSection title="Estilos musicais" icon={<Music className="text-[#1DC95A]" size={22} />}>
               <TagList items={profile.styles} emptyText="Nenhum estilo informado" />
             </ProfileSection>
+
+            <ProfileSection title="Disponibilidade" icon={<CalendarDays className="text-[#1DC95A]" size={22} />}>
+              <div className="space-y-2 text-zinc-200">
+                {availabilitySummary.map((item) => (
+                  <p key={item}>{item}</p>
+                ))}
+              </div>
+            </ProfileSection>
           </div>
         </section>
       ) : null}
     </>
   )
+}
+
+function getConnectButtonState(collaborationState: MusicianCollaborationState, isConnecting: boolean) {
+  if (isConnecting) {
+    return { disabled: true, icon: <Heart size={17} />, label: 'Enviando...' }
+  }
+
+  if (collaborationState === 'PENDING_SENT') {
+    return { disabled: true, icon: <MailCheck size={17} />, label: 'Convite enviado' }
+  }
+
+  if (collaborationState === 'ACCEPTED') {
+    return { disabled: true, icon: <Check size={17} />, label: 'Conectado' }
+  }
+
+  return { disabled: false, icon: <Heart size={17} />, label: 'Conectar' }
 }
 
 function formatExperience(experience: number | null) {

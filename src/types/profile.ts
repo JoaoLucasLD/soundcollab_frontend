@@ -9,6 +9,10 @@ export type CollaborationGoal =
 
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY'
 
+export type AvailabilityPeriod = 'WEEKDAYS' | 'WEEKENDS'
+
+export type AvailabilityTime = 'MORNING' | 'AFTERNOON' | 'EVENING'
+
 export type ProfileResponse = {
   id: string
   userId: string
@@ -19,6 +23,9 @@ export type ProfileResponse = {
   preferences: string | null
   bio: string | null
   collaborationGoals: CollaborationGoal[]
+  availabilityPeriods: AvailabilityPeriod[]
+  availabilityTimes: AvailabilityTime[]
+  availabilityNotes: string | null
   instruments: string[]
   styles: string[]
   createdAt: string
@@ -33,6 +40,9 @@ export type UpdateProfilePayload = {
   preferences?: string
   bio?: string
   collaborationGoals?: CollaborationGoal[]
+  availabilityPeriods?: AvailabilityPeriod[]
+  availabilityTimes?: AvailabilityTime[]
+  availabilityNotes?: string
 }
 
 export type UpdateProfileInstrumentsPayload = {
