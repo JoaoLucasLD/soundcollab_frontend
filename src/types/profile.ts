@@ -19,6 +19,7 @@ export type ProfileResponse = {
   displayName: string
   city: string | null
   gender: Gender | null
+  age: number | null
   experience: number | null
   preferences: string | null
   bio: string | null
@@ -36,6 +37,7 @@ export type UpdateProfilePayload = {
   displayName?: string
   city?: string
   gender?: Gender
+  birthDate?: string
   experience?: number
   preferences?: string
   bio?: string

@@ -274,6 +274,7 @@ function mapDiscoveryItemToMusician(item: DiscoveryMusicianResponse, index: numb
     id: item.id,
     userId: item.userId,
     name: item.displayName,
+    age: item.age ?? undefined,
     gender: getGenderLabel(item.gender),
     city: item.city ?? 'Cidade não informada',
     experience: formatExperience(item.experience),

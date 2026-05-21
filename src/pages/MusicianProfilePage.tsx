@@ -13,7 +13,7 @@ import {
   Trophy,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Tag } from '../components/ui/Tag'
 import { useCollaborations, useCreateCollaboration } from '../hooks/useCollaborations'
@@ -26,6 +26,7 @@ import { getProfileByIdentifier } from '../services/profile.service'
 
 export function MusicianProfilePage() {
   const { userId: profileIdentifier } = useParams<{ userId: string }>()
+  const [searchParams] = useSearchParams()
   const { data: currentUser } = useCurrentUser()
   const { data: collaborationsResult } = useCollaborations()
   const collaborations = collaborationsResult?.items ?? []
@@ -63,6 +64,7 @@ export function MusicianProfilePage() {
   )
   const collaborationState = getCollaborationStateForUser(collaborations, profile?.userId)
   const connectButton = getConnectButtonState(collaborationState, createCollaborationMutation.isPending)
+  const backTarget = getBackTarget(searchParams)
 
   return (
     <>
@@ -72,7 +74,7 @@ export function MusicianProfilePage() {
         action={
           <Link
             className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-3 text-sm font-bold text-zinc-100 transition hover:bg-zinc-800"
-            to="/descobrir"
+            to={backTarget}
           >
             <ArrowLeft size={17} />
             Voltar
@@ -121,12 +123,13 @@ export function MusicianProfilePage() {
                   {formatExperience(profile.experience)}
                 </p>
                 <p className="text-zinc-400">{gender}</p>
+                {typeof profile.age === 'number' ? <p className="text-zinc-400">{profile.age} anos</p> : null}
               </div>
 
               {collaborationState === 'PENDING_RECEIVED' ? (
                 <Link
                   className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#1DC95A]/70 bg-[#1DC95A]/10 px-4 py-3 text-sm font-bold text-[#1DC95A] transition hover:bg-[#1DC95A]/15"
-                  to="/colaboracoes"
+                  to="/colaboracoes?tab=received"
                 >
                   <MessageCircle size={17} />
                   Responder convite
@@ -196,6 +199,15 @@ function getConnectButtonState(collaborationState: MusicianCollaborationState, i
   }
 
   return { disabled: false, icon: <Heart size={17} />, label: 'Conectar' }
+}
+
+function getBackTarget(searchParams: URLSearchParams) {
+  if (searchParams.get('from') !== 'collaborations') {
+    return '/descobrir'
+  }
+
+  const tab = searchParams.get('tab')
+  return tab ? `/colaboracoes?tab=${tab}` : '/colaboracoes'
 }
 
 function formatExperience(experience: number | null) {

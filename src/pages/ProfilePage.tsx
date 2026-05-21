@@ -15,6 +15,7 @@ import {
   getAvailabilityPeriodLabel,
   getAvailabilityTimeLabel,
 } from '../lib/availability'
+import { formatBirthDateForDisplay, formatBirthDateInput, parseBirthDateDisplay, validateBirthDateAge } from '../lib/birth-date'
 import { collaborationGoalOptions, getCollaborationGoalLabel } from '../lib/collaboration-goals'
 import { genderOptions, getGenderLabel } from '../lib/gender'
 import { capitalizeDisplayName } from '../lib/text-format'
@@ -54,6 +55,13 @@ const genderSchema = z.object({
   gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY']),
 })
 
+const birthDateSchema = z.object({
+  birthDate: z
+    .string()
+    .trim()
+    .refine(validateBirthDateAge, 'Informe uma data válida para idade entre 18 e 100 anos.'),
+})
+
 const experienceSchema = z.object({
   experience: z.coerce
     .number()
@@ -84,7 +92,7 @@ const stylesSchema = z.object({
   styleIds: z.array(z.string()).max(20, 'Escolha até 20 estilos.'),
 })
 
-type InlineEditor = 'displayName' | 'city' | 'gender' | 'experience' | 'about' | null
+type InlineEditor = 'displayName' | 'city' | 'gender' | 'birthDate' | 'experience' | 'about' | null
 type SelectionModal = 'instruments' | 'styles' | 'goals' | 'availability' | null
 
 type SaveRequest =
@@ -102,6 +110,7 @@ export function ProfilePage() {
   const [displayNameValue, setDisplayNameValue] = useState('')
   const [cityValue, setCityValue] = useState('')
   const [genderValue, setGenderValue] = useState<Gender>('PREFER_NOT_TO_SAY')
+  const [birthDateValue, setBirthDateValue] = useState('')
   const [experienceValue, setExperienceValue] = useState(0)
   const [bioValue, setBioValue] = useState('')
   const [selectedInstrumentIds, setSelectedInstrumentIds] = useState<string[]>([])
@@ -116,6 +125,7 @@ export function ProfilePage() {
   const displayName = profile?.displayName || currentUser?.email || 'Você'
   const city = profile?.city || 'Localização não informada'
   const gender = getGenderLabel(profile?.gender)
+  const age = profile?.age
   const experienceYears = profile?.experience
   const instruments = profile?.instruments ?? []
   const styles = profile?.styles ?? []
@@ -173,6 +183,10 @@ export function ProfilePage() {
 
     if (editor === 'gender') {
       setGenderValue(profile?.gender ?? 'PREFER_NOT_TO_SAY')
+    }
+
+    if (editor === 'birthDate') {
+      setBirthDateValue(formatBirthDateForDisplay(profile?.birthDate))
     }
 
     if (editor === 'experience') {
@@ -248,6 +262,17 @@ export function ProfilePage() {
     }
 
     saveMutation.mutate({ type: 'profile', payload: { gender: result.data.gender } })
+  }
+
+  function saveBirthDate() {
+    const result = birthDateSchema.safeParse({ birthDate: parseBirthDateDisplay(birthDateValue) })
+
+    if (!result.success) {
+      setFormError(result.error.issues[0]?.message ?? 'Revise a data de nascimento.')
+      return
+    }
+
+    saveMutation.mutate({ type: 'profile', payload: { birthDate: result.data.birthDate } })
   }
 
   function saveExperience() {
@@ -442,6 +467,37 @@ export function ProfilePage() {
               </InlineEditorPanel>
             ) : (
               <p>{gender}</p>
+            )}
+          </ProfileInfoCard>
+
+          <ProfileInfoCard
+            action={<IconButton ariaLabel="Editar data de nascimento" onClick={() => openInlineEditor('birthDate')} />}
+            icon={<CalendarDays className="text-[#1DC95A]" size={22} />}
+            title="Idade"
+          >
+            {inlineEditor === 'birthDate' ? (
+              <InlineEditorPanel
+                error={formError}
+                isSaving={isSaving}
+                onCancel={closeInlineEditor}
+                onSave={saveBirthDate}
+              >
+                <FormField label="Data de nascimento">
+                  <input
+                    className={inputClassName}
+                    inputMode="numeric"
+                    maxLength={10}
+                    onChange={(event) => setBirthDateValue(formatBirthDateInput(event.target.value))}
+                    placeholder="dd/mm/aaaa"
+                    type="text"
+                    value={birthDateValue}
+                  />
+                </FormField>
+              </InlineEditorPanel>
+            ) : typeof age === 'number' ? (
+              <p>{age} anos</p>
+            ) : (
+              <p className="text-zinc-400">Idade ainda não informada</p>
             )}
           </ProfileInfoCard>
 

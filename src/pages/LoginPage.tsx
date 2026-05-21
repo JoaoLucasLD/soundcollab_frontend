@@ -1,11 +1,13 @@
 import axios from 'axios'
 import { Music } from 'lucide-react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { login } from '../services/auth.service'
-import { getAuthToken } from '../lib/api'
+import { clearAuthToken, getAuthToken } from '../lib/api'
+import { currentUserQueryKey, useCurrentUser } from '../hooks/useCurrentUser'
 
 const loginSchema = z.object({
   email: z.string().email('Informe um email válido.'),
@@ -23,7 +25,9 @@ type LoginLocationState = {
 export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const queryClient = useQueryClient()
   const token = getAuthToken()
+  const currentUserQuery = useCurrentUser()
   const state = location.state as LoginLocationState | null
   const redirectTo = state?.from?.pathname ?? '/descobrir'
 
@@ -43,6 +47,7 @@ export function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: login,
     onSuccess: () => {
+      queryClient.removeQueries({ queryKey: currentUserQueryKey })
       navigate(redirectTo, { replace: true })
     },
     onError: (error) => {
@@ -54,7 +59,14 @@ export function LoginPage() {
     },
   })
 
-  if (token) {
+  useEffect(() => {
+    if (token && currentUserQuery.isError) {
+      clearAuthToken()
+      queryClient.removeQueries({ queryKey: currentUserQueryKey })
+    }
+  }, [currentUserQuery.isError, queryClient, token])
+
+  if (token && currentUserQuery.isSuccess) {
     return <Navigate to="/descobrir" replace />
   }
 

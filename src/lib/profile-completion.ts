@@ -5,6 +5,7 @@ export function isProfileComplete(profile: UserProfile | null | undefined) {
     profile?.displayName &&
       profile.city &&
       profile.gender &&
+      profile.birthDate &&
       typeof profile.experience === 'number' &&
       profile.instruments.length > 0 &&
       profile.styles.length > 0,

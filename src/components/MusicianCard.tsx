@@ -83,7 +83,7 @@ export function MusicianCard({
           {collaborationState === 'PENDING_RECEIVED' ? (
             <Link
               className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#1DC95A]/70 bg-[#1DC95A]/10 px-4 py-3 text-sm font-bold text-[#1DC95A] transition hover:bg-[#1DC95A]/15"
-              to="/colaboracoes"
+              to="/colaboracoes?tab=received"
             >
               <MessageCircle size={17} />
               Responder

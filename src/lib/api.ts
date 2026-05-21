@@ -17,6 +17,17 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      clearAuthToken()
+    }
+
+    return Promise.reject(error)
+  },
+)
+
 export function saveAuthToken(token: string) {
   localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token)
 }

@@ -1,10 +1,13 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
+import { currentUserQueryKey } from '../../hooks/useCurrentUser'
 import { clearAuthToken, getAuthToken } from '../../lib/api'
 import { isProfileComplete } from '../../lib/profile-completion'
 
 export function RequireAuth() {
   const location = useLocation()
+  const queryClient = useQueryClient()
   const token = getAuthToken()
   const currentUserQuery = useCurrentUser()
 
@@ -24,6 +27,7 @@ export function RequireAuth() {
 
   if (currentUserQuery.isError) {
     clearAuthToken()
+    queryClient.removeQueries({ queryKey: currentUserQueryKey })
     return <Navigate to="/login" replace state={{ from: location }} />
   }
 

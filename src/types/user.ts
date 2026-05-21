@@ -5,6 +5,8 @@ export type UserProfile = {
   displayName: string
   city: string | null
   gender: Gender | null
+  birthDate: string | null
+  age: number | null
   experience: number | null
   preferences: string | null
   bio: string | null

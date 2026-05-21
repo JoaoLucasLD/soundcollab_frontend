@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { useInstruments, useStyles } from '../hooks/useCatalogs'
 import { currentUserQueryKey, useCurrentUser } from '../hooks/useCurrentUser'
 import { availabilityPeriodOptions, availabilityTimeOptions } from '../lib/availability'
+import { formatBirthDateForDisplay, formatBirthDateInput, parseBirthDateDisplay, validateBirthDateAge } from '../lib/birth-date'
 import { collaborationGoalOptions } from '../lib/collaboration-goals'
 import { genderOptions } from '../lib/gender'
 import { isProfileComplete } from '../lib/profile-completion'
@@ -34,6 +35,10 @@ const onboardingSchema = z.object({
   gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY'], {
     message: 'Selecione seu gênero.',
   }),
+  birthDate: z
+    .string()
+    .trim()
+    .refine(validateBirthDateAge, 'Informe uma data válida para idade entre 18 e 100 anos.'),
   experience: z.coerce
     .number()
     .int('Informe um número inteiro.')
@@ -60,7 +65,7 @@ const onboardingSteps: OnboardingStep[] = [
   {
     title: 'Informações iniciais',
     description: 'Comece com as informações que ajudam outros músicos a reconhecerem você.',
-    fields: ['displayName', 'city', 'gender', 'experience'],
+    fields: ['displayName', 'city', 'gender', 'birthDate', 'experience'],
   },
   {
     title: 'Sobre a colaboração',
@@ -100,6 +105,7 @@ export function OnboardingProfilePage() {
       displayName: currentUser?.profile?.displayName ?? '',
       city: currentUser?.profile?.city ?? '',
       gender: currentUser?.profile?.gender ?? 'PREFER_NOT_TO_SAY',
+      birthDate: formatBirthDateForDisplay(currentUser?.profile?.birthDate),
       experience: currentUser?.profile?.experience ?? 0,
       bio: '',
       collaborationGoals: [],
@@ -123,6 +129,7 @@ export function OnboardingProfilePage() {
       displayName: profile.displayName ?? '',
       city: profile.city ?? '',
       gender: profile.gender ?? 'PREFER_NOT_TO_SAY',
+      birthDate: formatBirthDateForDisplay(profile.birthDate),
       experience: profile.experience ?? 0,
       bio: profile.bio ?? profile.preferences ?? '',
       collaborationGoals: profile.collaborationGoals ?? [],
@@ -143,6 +150,7 @@ export function OnboardingProfilePage() {
           displayName: values.displayName,
           city: values.city,
           gender: values.gender,
+          birthDate: values.birthDate,
           experience: values.experience,
           bio: values.bio || undefined,
           collaborationGoals: values.collaborationGoals,
@@ -189,7 +197,7 @@ export function OnboardingProfilePage() {
 
   function validateCurrentStep() {
     clearErrors()
-    const values = getValues()
+    const values = normalizeOnboardingBirthDate(getValues())
     const result = onboardingSchema.safeParse(values)
 
     if (!result.success) {
@@ -239,7 +247,7 @@ export function OnboardingProfilePage() {
   function handleOnboardingSubmit(values: OnboardingFormValues) {
     clearErrors()
 
-    const result = onboardingSchema.safeParse(values)
+    const result = onboardingSchema.safeParse(normalizeOnboardingBirthDate(values))
 
     if (!result.success) {
       applyValidationErrors(result)
@@ -313,6 +321,21 @@ export function OnboardingProfilePage() {
                       </option>
                     ))}
                   </select>
+                </FormField>
+
+                <FormField label="Data de nascimento" error={errors.birthDate?.message}>
+                  <input
+                    className="w-full rounded-lg border border-zinc-700 bg-[#141414] px-3 py-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-[#1DC95A] focus:ring-2 focus:ring-[#1DC95A]/20"
+                    inputMode="numeric"
+                    maxLength={10}
+                    placeholder="dd/mm/aaaa"
+                    type="text"
+                    {...register('birthDate', {
+                      onChange: (event) => {
+                        event.target.value = formatBirthDateInput(event.target.value)
+                      },
+                    })}
+                  />
                 </FormField>
 
                 <FormField label="Anos de experiência" error={errors.experience?.message}>
@@ -779,11 +802,19 @@ function normalizeInstrumentCategoryName(categoryName: string) {
     .toLowerCase()
 }
 
+function normalizeOnboardingBirthDate(values: OnboardingFormValues) {
+  return {
+    ...values,
+    birthDate: parseBirthDateDisplay(values.birthDate),
+  }
+}
+
 function isOnboardingField(field: unknown): field is OnboardingField {
   return (
     field === 'displayName' ||
     field === 'city' ||
     field === 'gender' ||
+    field === 'birthDate' ||
     field === 'experience' ||
     field === 'bio' ||
     field === 'collaborationGoals' ||
