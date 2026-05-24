@@ -4,6 +4,7 @@ import axios from 'axios'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, Check, Edit3, Guitar, MapPin, Music, Target, Trophy, X } from 'lucide-react'
 import { z } from 'zod'
+import { CityAutocomplete } from '../components/CityAutocomplete'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Tag } from '../components/ui/Tag'
 import { useInstruments, useStyles } from '../hooks/useCatalogs'
@@ -109,6 +110,8 @@ export function ProfilePage() {
   const [selectionModal, setSelectionModal] = useState<SelectionModal>(null)
   const [displayNameValue, setDisplayNameValue] = useState('')
   const [cityValue, setCityValue] = useState('')
+  const [cityLatitudeValue, setCityLatitudeValue] = useState<number | null>(null)
+  const [cityLongitudeValue, setCityLongitudeValue] = useState<number | null>(null)
   const [genderValue, setGenderValue] = useState<Gender>('PREFER_NOT_TO_SAY')
   const [birthDateValue, setBirthDateValue] = useState('')
   const [experienceValue, setExperienceValue] = useState(0)
@@ -124,6 +127,7 @@ export function ProfilePage() {
   const profile = currentUser?.profile
   const displayName = profile?.displayName || currentUser?.email || 'Você'
   const city = profile?.city || 'Localização não informada'
+  const hasCityCoordinates = typeof profile?.latitude === 'number' && typeof profile?.longitude === 'number'
   const gender = getGenderLabel(profile?.gender)
   const age = profile?.age
   const experienceYears = profile?.experience
@@ -179,6 +183,8 @@ export function ProfilePage() {
 
     if (editor === 'city') {
       setCityValue(profile?.city ?? '')
+      setCityLatitudeValue(profile?.latitude ?? null)
+      setCityLongitudeValue(profile?.longitude ?? null)
     }
 
     if (editor === 'gender') {
@@ -250,7 +256,14 @@ export function ProfilePage() {
       return
     }
 
-    saveMutation.mutate({ type: 'profile', payload: { city: result.data.city || undefined } })
+    saveMutation.mutate({
+      type: 'profile',
+      payload: {
+        city: result.data.city || undefined,
+        latitude: cityLatitudeValue,
+        longitude: cityLongitudeValue,
+      },
+    })
   }
 
   function saveGender() {
@@ -362,21 +375,21 @@ export function ProfilePage() {
 
   function toggleGoal(goal: CollaborationGoal) {
     setSelectedGoals((currentGoals) =>
-      currentGoals.includes(goal) ? currentGoals.filter((currentGoal) => currentGoal !== goal) : [...currentGoals, goal],
+      currentGoals.includes(goal) ?currentGoals.filter((currentGoal) => currentGoal !== goal) : [...currentGoals, goal],
     )
   }
 
   function toggleAvailabilityPeriod(period: AvailabilityPeriod) {
     setSelectedAvailabilityPeriods((currentPeriods) =>
       currentPeriods.includes(period)
-        ? currentPeriods.filter((currentPeriod) => currentPeriod !== period)
+        ?currentPeriods.filter((currentPeriod) => currentPeriod !== period)
         : [...currentPeriods, period],
     )
   }
 
   function toggleAvailabilityTime(time: AvailabilityTime) {
     setSelectedAvailabilityTimes((currentTimes) =>
-      currentTimes.includes(time) ? currentTimes.filter((currentTime) => currentTime !== time) : [...currentTimes, time],
+      currentTimes.includes(time) ?currentTimes.filter((currentTime) => currentTime !== time) : [...currentTimes, time],
     )
   }
 
@@ -396,7 +409,7 @@ export function ProfilePage() {
               </div>
             </div>
 
-            {inlineEditor === 'displayName' ? (
+            {inlineEditor === 'displayName'  ? (
               <InlineEditorPanel
                 error={formError}
                 isSaving={isSaving}
@@ -428,19 +441,43 @@ export function ProfilePage() {
             icon={<MapPin className="text-[#1DC95A]" size={22} />}
             title="Localização"
           >
-            {inlineEditor === 'city' ? (
+            {inlineEditor === 'city'  ? (
               <InlineEditorPanel error={formError} isSaving={isSaving} onCancel={closeInlineEditor} onSave={saveCity}>
                 <FormField label="Cidade">
-                  <input
-                    className={inputClassName}
-                    onChange={(event) => setCityValue(event.target.value)}
+                  <CityAutocomplete
+                    inputClassName={inputClassName}
+                    onChange={(value) => {
+                      setCityValue(value)
+                      setCityLatitudeValue(null)
+                      setCityLongitudeValue(null)
+                    }}
+                    onSelect={(city) => {
+                      setCityValue(city.label)
+                      setCityLatitudeValue(city.latitude)
+                      setCityLongitudeValue(city.longitude)
+                    }}
                     placeholder="São Paulo, SP"
                     value={cityValue}
                   />
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Selecione uma sugestão para atualizar as coordenadas usadas no filtro por distância.
+                  </p>
                 </FormField>
               </InlineEditorPanel>
             ) : (
-              <p>{city}</p>
+              <>
+                <p>{city}</p>
+                <p className="mt-2 text-sm text-zinc-400">
+                  {hasCityCoordinates
+                    ?'Cidade com coordenadas salva para filtros de distância.'
+                    : 'Edite a cidade e selecione uma sugestão para liberar o filtro por quilômetros.'}
+                </p>
+                {formError && inlineEditor === null  ? (
+                  <div className="mt-3 rounded-lg border border-red-400/30 bg-red-950/40 px-3 py-2 text-sm text-red-200">
+                    {formError}
+                  </div>
+                ) : null}
+              </>
             )}
           </ProfileInfoCard>
 
@@ -449,7 +486,7 @@ export function ProfilePage() {
             icon={<Target className="text-[#1DC95A]" size={22} />}
             title="Gênero"
           >
-            {inlineEditor === 'gender' ? (
+            {inlineEditor === 'gender'  ? (
               <InlineEditorPanel error={formError} isSaving={isSaving} onCancel={closeInlineEditor} onSave={saveGender}>
                 <FormField label="Gênero">
                   <select
@@ -475,7 +512,7 @@ export function ProfilePage() {
             icon={<CalendarDays className="text-[#1DC95A]" size={22} />}
             title="Idade"
           >
-            {inlineEditor === 'birthDate' ? (
+            {inlineEditor === 'birthDate'  ? (
               <InlineEditorPanel
                 error={formError}
                 isSaving={isSaving}
@@ -494,7 +531,7 @@ export function ProfilePage() {
                   />
                 </FormField>
               </InlineEditorPanel>
-            ) : typeof age === 'number' ? (
+            ) : typeof age === 'number'  ? (
               <p>{age} anos</p>
             ) : (
               <p className="text-zinc-400">Idade ainda não informada</p>
@@ -506,7 +543,7 @@ export function ProfilePage() {
             icon={<Trophy className="text-[#1DC95A]" size={22} />}
             title="Experiência Musical"
           >
-            {inlineEditor === 'experience' ? (
+            {inlineEditor === 'experience'  ? (
               <InlineEditorPanel
                 error={formError}
                 isSaving={isSaving}
@@ -524,7 +561,7 @@ export function ProfilePage() {
                   />
                 </FormField>
               </InlineEditorPanel>
-            ) : typeof experienceYears === 'number' ? (
+            ) : typeof experienceYears === 'number'  ? (
               <>
                 <p>{experienceYears} anos</p>
                 <p className="mt-2 text-sm text-zinc-400">Tempo de experiência informado no perfil</p>
@@ -541,7 +578,7 @@ export function ProfilePage() {
             title="Sobre Mim"
             description="Conte um pouco sobre você e sua trajetória musical"
           >
-            {inlineEditor === 'about' ? (
+            {inlineEditor === 'about'  ? (
               <InlineEditorPanel error={formError} isSaving={isSaving} onCancel={closeInlineEditor} onSave={saveAbout}>
                 <FormField label="Sobre mim">
                   <textarea
@@ -599,7 +636,7 @@ export function ProfilePage() {
         </div>
       </section>
 
-      {selectionModal === 'instruments' ? (
+      {selectionModal === 'instruments'  ? (
         <SelectionDialog
           error={formError}
           isSaving={isSaving}
@@ -618,7 +655,7 @@ export function ProfilePage() {
         </SelectionDialog>
       ) : null}
 
-      {selectionModal === 'styles' ? (
+      {selectionModal === 'styles'  ? (
         <SelectionDialog
           error={formError}
           isSaving={isSaving}
@@ -637,7 +674,7 @@ export function ProfilePage() {
         </SelectionDialog>
       ) : null}
 
-      {selectionModal === 'goals' ? (
+      {selectionModal === 'goals'  ? (
         <SelectionDialog
           error={formError}
           isSaving={isSaving}
@@ -666,7 +703,7 @@ export function ProfilePage() {
         </SelectionDialog>
       ) : null}
 
-      {selectionModal === 'availability' ? (
+      {selectionModal === 'availability'  ? (
         <SelectionDialog
           error={formError}
           isSaving={isSaving}
@@ -718,7 +755,7 @@ function InlineEditorPanel({ children, error, isSaving, onCancel, onSave }: Inli
   return (
     <div className="mt-5 text-left">
       {children}
-      {error ? (
+      {error  ? (
         <div className="mt-3 rounded-lg border border-red-400/30 bg-red-950/40 px-3 py-2 text-sm text-red-200">
           {error}
         </div>
@@ -820,7 +857,7 @@ function SelectionDialog({ children, description, error, isSaving, onClose, onSa
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">{children}</div>
 
-        {error ? (
+        {error  ? (
           <div className="mx-5 mb-4 rounded-lg border border-red-400/30 bg-red-950/40 px-3 py-2 text-sm text-red-200">
             {error}
           </div>
@@ -1016,7 +1053,7 @@ function InstrumentSelection({
               className={[
                 'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-bold transition',
                 isActive
-                  ? 'border-[#1DC95A] bg-[#1DC95A] text-[#141414]'
+                  ?'border-[#1DC95A] bg-[#1DC95A] text-[#141414]'
                   : 'border-zinc-700 bg-[#141414] text-zinc-200 hover:bg-zinc-800',
               ].join(' ')}
               key={group.categoryId}
@@ -1024,11 +1061,11 @@ function InstrumentSelection({
               type="button"
             >
               {capitalizeDisplayName(group.categoryName)}
-              {selectedCount > 0 ? (
+              {selectedCount > 0  ? (
                 <span
                   className={[
                     'inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs',
-                    isActive ? 'bg-[#141414] text-[#1DC95A]' : 'bg-[#1DC95A] text-[#141414]',
+                    isActive ?'bg-[#141414] text-[#1DC95A]' : 'bg-[#1DC95A] text-[#141414]',
                   ].join(' ')}
                 >
                   {selectedCount}
@@ -1039,7 +1076,7 @@ function InstrumentSelection({
         })}
       </div>
 
-      {activeGroup ? (
+      {activeGroup  ? (
         <div className="rounded-lg border border-zinc-800 bg-[#141414] p-3">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h3 className="text-sm font-bold text-zinc-100">{capitalizeDisplayName(activeGroup.categoryName)}</h3>
@@ -1140,13 +1177,13 @@ function selectionButtonClassName(isSelected: boolean) {
   return [
     'min-w-0 rounded-lg border px-3 py-2 text-left text-sm font-semibold transition',
     isSelected
-      ? 'border-[#1DC95A] bg-[#1DC95A] text-[#141414]'
+      ?'border-[#1DC95A] bg-[#1DC95A] text-[#141414]'
       : 'border-zinc-800 bg-[#141414] text-zinc-200 hover:bg-zinc-800',
   ].join(' ')
 }
 
 function toggleId(currentIds: string[], itemId: string) {
-  return currentIds.includes(itemId) ? currentIds.filter((currentId) => currentId !== itemId) : [...currentIds, itemId]
+  return currentIds.includes(itemId) ?currentIds.filter((currentId) => currentId !== itemId) : [...currentIds, itemId]
 }
 
 function getSelectedCatalogIds(items: CatalogItem[], selectedNames: string[]) {
@@ -1192,7 +1229,7 @@ function getInstrumentCategoryOrder(categoryName: string) {
     return categoryIndex
   }
 
-  return normalizedCategory === 'outros' ? orderedCategories.length + 1 : orderedCategories.length
+  return normalizedCategory === 'outros' ?orderedCategories.length + 1 : orderedCategories.length
 }
 
 function normalizeInstrumentCategoryName(categoryName: string) {
@@ -1202,3 +1239,4 @@ function normalizeInstrumentCategoryName(categoryName: string) {
     .trim()
     .toLowerCase()
 }
+

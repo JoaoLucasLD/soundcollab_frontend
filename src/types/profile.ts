@@ -18,6 +18,8 @@ export type ProfileResponse = {
   userId: string
   displayName: string
   city: string | null
+  latitude?: number | null
+  longitude?: number | null
   gender: Gender | null
   age: number | null
   experience: number | null
@@ -36,6 +38,8 @@ export type ProfileResponse = {
 export type UpdateProfilePayload = {
   displayName?: string
   city?: string
+  latitude?: number | null
+  longitude?: number | null
   gender?: Gender
   birthDate?: string
   experience?: number

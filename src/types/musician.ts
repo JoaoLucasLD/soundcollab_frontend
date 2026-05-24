@@ -5,6 +5,7 @@ export type Musician = {
   age?: number
   gender?: string
   city: string
+  distanceKm?: number
   experience: string
   instruments: string[]
   styles: string[]

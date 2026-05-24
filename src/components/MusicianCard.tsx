@@ -1,4 +1,4 @@
-import { Check, Heart, MailCheck, MapPin, MessageCircle, Sparkles, Trophy, UserRound } from 'lucide-react'
+import { Check, Heart, MailCheck, MapPin, MessageCircle, Trophy, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { MusicianCollaborationState } from '../lib/collaboration-state'
 import { capitalizeDisplayName } from '../lib/text-format'
@@ -24,12 +24,6 @@ export function MusicianCard({
     <article className="flex h-full flex-col overflow-hidden rounded-lg border border-zinc-800 bg-[#181818] shadow-sm shadow-black/30">
       <div className={`relative aspect-[4/3] overflow-hidden bg-gradient-to-br ${musician.photoTone}`}>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(255,255,255,0.55),transparent_28%),radial-gradient(circle_at_80%_25%,rgba(255,255,255,0.22),transparent_30%)]" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3 rounded-lg bg-black/25 px-8 py-6 text-white backdrop-blur-sm">
-            <Sparkles size={44} />
-            <span className="text-sm font-bold">{capitalizeDisplayName(musician.photoLabel)}</span>
-          </div>
-        </div>
       </div>
 
       <div className="flex flex-1 flex-col space-y-4 p-5">
@@ -45,6 +39,9 @@ export function MusicianCard({
           <p className="flex items-center gap-2">
             <MapPin className="text-[#1DC95A]" size={17} />
             {musician.city}
+            {typeof musician.distanceKm === 'number' ? (
+              <span className="text-zinc-500">- {musician.distanceKm} km</span>
+            ) : null}
           </p>
           <p className="flex items-center gap-2">
             <Trophy className="text-[#1DC95A]" size={17} />
@@ -120,3 +117,4 @@ function getConnectButtonState(collaborationState: MusicianCollaborationState, i
 
   return { disabled: false, icon: <Heart size={17} />, label: 'Conectar' }
 }
+

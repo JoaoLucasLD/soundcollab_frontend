@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useForm, type FieldPath, type UseFormRegister } from 'react-hook-form'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
+import { CityAutocomplete } from '../components/CityAutocomplete'
 import { useInstruments, useStyles } from '../hooks/useCatalogs'
 import { currentUserQueryKey, useCurrentUser } from '../hooks/useCurrentUser'
 import { availabilityPeriodOptions, availabilityTimeOptions } from '../lib/availability'
@@ -32,6 +33,8 @@ const availabilityTimeValues = ['MORNING', 'AFTERNOON', 'EVENING'] as const
 const onboardingSchema = z.object({
   displayName: z.string().trim().min(2, 'Informe pelo menos 2 caracteres.').max(80, 'Use no máximo 80 caracteres.'),
   city: z.string().trim().min(2, 'Informe sua cidade.').max(120, 'Use no máximo 120 caracteres.'),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY'], {
     message: 'Selecione seu gênero.',
   }),
@@ -90,6 +93,8 @@ export function OnboardingProfilePage() {
   const isFirstStep = activeStep === 0
   const isLastStep = activeStep === onboardingSteps.length - 1
 
+
+  
   const {
     clearErrors,
     formState: { errors },
@@ -104,6 +109,8 @@ export function OnboardingProfilePage() {
     defaultValues: {
       displayName: currentUser?.profile?.displayName ?? '',
       city: currentUser?.profile?.city ?? '',
+      latitude: currentUser?.profile?.latitude ?? undefined,
+      longitude: currentUser?.profile?.longitude ?? undefined,
       gender: currentUser?.profile?.gender ?? 'PREFER_NOT_TO_SAY',
       birthDate: formatBirthDateForDisplay(currentUser?.profile?.birthDate),
       experience: currentUser?.profile?.experience ?? 0,
@@ -128,6 +135,8 @@ export function OnboardingProfilePage() {
     reset({
       displayName: profile.displayName ?? '',
       city: profile.city ?? '',
+      latitude: profile.latitude ?? undefined,
+      longitude: profile.longitude ?? undefined,
       gender: profile.gender ?? 'PREFER_NOT_TO_SAY',
       birthDate: formatBirthDateForDisplay(profile.birthDate),
       experience: profile.experience ?? 0,
@@ -145,19 +154,21 @@ export function OnboardingProfilePage() {
 
   const completeProfileMutation = useMutation({
     mutationFn: async (values: OnboardingFormValues) => {
+      await updateMyProfile({
+        displayName: values.displayName,
+        city: values.city,
+        ...getLocationPayload(values),
+        gender: values.gender,
+        birthDate: values.birthDate,
+        experience: values.experience,
+        bio: values.bio || undefined,
+        collaborationGoals: values.collaborationGoals,
+        availabilityPeriods: values.availabilityPeriods,
+        availabilityTimes: values.availabilityTimes,
+        availabilityNotes: values.availabilityNotes || undefined,
+      })
+
       await Promise.all([
-        updateMyProfile({
-          displayName: values.displayName,
-          city: values.city,
-          gender: values.gender,
-          birthDate: values.birthDate,
-          experience: values.experience,
-          bio: values.bio || undefined,
-          collaborationGoals: values.collaborationGoals,
-          availabilityPeriods: values.availabilityPeriods,
-          availabilityTimes: values.availabilityTimes,
-          availabilityNotes: values.availabilityNotes || undefined,
-        }),
         replaceMyInstruments({ instrumentIds: values.instrumentIds }),
         replaceMyStyles({ styleIds: values.styleIds }),
       ])
@@ -303,11 +314,24 @@ export function OnboardingProfilePage() {
                 </FormField>
 
                 <FormField label="Cidade" error={errors.city?.message}>
-                  <input
-                    className="w-full rounded-lg border border-zinc-700 bg-[#141414] px-3 py-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-[#1DC95A] focus:ring-2 focus:ring-[#1DC95A]/20"
+                  <CityAutocomplete
+                    inputClassName="w-full rounded-lg border border-zinc-700 bg-[#141414] px-3 py-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-[#1DC95A] focus:ring-2 focus:ring-[#1DC95A]/20"
+                    onChange={(value) => {
+                      setValue('city', value, { shouldDirty: true, shouldValidate: true })
+                      setValue('latitude', null, { shouldDirty: true })
+                      setValue('longitude', null, { shouldDirty: true })
+                    }}
+                    onSelect={(city) => {
+                      setValue('city', city.label, { shouldDirty: true, shouldValidate: true })
+                      setValue('latitude', city.latitude, { shouldDirty: true })
+                      setValue('longitude', city.longitude, { shouldDirty: true })
+                    }}
                     placeholder="Itajubá, MG"
-                    {...register('city')}
+                    value={watch('city')}
                   />
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Para utilizar o filtro de distância, informe sua localização.
+                  </p>
                 </FormField>
 
                 <FormField label="Gênero" error={errors.gender?.message}>
@@ -807,6 +831,18 @@ function normalizeOnboardingBirthDate(values: OnboardingFormValues) {
     ...values,
     birthDate: parseBirthDateDisplay(values.birthDate),
   }
+}
+
+function getLocationPayload(values: OnboardingFormValues) {
+  if (typeof values.latitude === 'number' && typeof values.longitude === 'number') {
+    return { latitude: values.latitude, longitude: values.longitude }
+  }
+
+  if (values.latitude === null && values.longitude === null) {
+    return { latitude: null, longitude: null }
+  }
+
+  return {}
 }
 
 function isOnboardingField(field: unknown): field is OnboardingField {

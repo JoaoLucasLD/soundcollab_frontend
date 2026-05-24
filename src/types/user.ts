@@ -4,6 +4,8 @@ export type UserProfile = {
   id: string
   displayName: string
   city: string | null
+  latitude: number | null
+  longitude: number | null
   gender: Gender | null
   birthDate: string | null
   age: number | null

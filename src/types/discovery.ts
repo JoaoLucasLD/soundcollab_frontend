@@ -7,6 +7,7 @@ export type DiscoveryMusicianResponse = {
   city: string | null
   gender: Gender | null
   age: number | null
+  distanceKm: number | null
   experience: number | null
   preferences: string | null
   instruments: string[]
@@ -22,5 +23,6 @@ export type DiscoveryMusiciansFilters = {
   city?: string
   gender?: Gender
   instrument?: string
+  radiusKm?: number
   style?: string
 }
