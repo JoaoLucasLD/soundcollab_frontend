@@ -37,7 +37,7 @@ export type ProfileResponse = {
 
 export type UpdateProfilePayload = {
   displayName?: string
-  city?: string
+  city?: string | null
   latitude?: number | null
   longitude?: number | null
   gender?: Gender

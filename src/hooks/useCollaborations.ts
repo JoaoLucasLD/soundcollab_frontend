@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   acceptCollaboration,
+  cancelCollaboration,
   createCollaboration,
   listCollaborations,
   rejectCollaboration,
@@ -43,6 +44,17 @@ export function useRejectCollaboration() {
 
   return useMutation({
     mutationFn: rejectCollaboration,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: collaborationsQueryKey })
+    },
+  })
+}
+
+export function useCancelCollaboration() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: cancelCollaboration,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: collaborationsQueryKey })
     },

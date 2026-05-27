@@ -24,3 +24,7 @@ export async function rejectCollaboration(collaborationId: string) {
   const { data } = await api.patch<Collaboration>(`/collaborations/${collaborationId}/reject`)
   return data
 }
+
+export async function cancelCollaboration(collaborationId: string) {
+  await api.delete(`/collaborations/${collaborationId}`)
+}

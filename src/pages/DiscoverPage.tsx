@@ -1,34 +1,37 @@
-import { Check, RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react'
+import { AlertTriangle, Check, RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { InstrumentCategoryPicker } from '../components/InstrumentCategoryPicker'
 import { MusicianCard } from '../components/MusicianCard'
 import { PageHeader } from '../components/ui/PageHeader'
 import { useInstruments, useStyles } from '../hooks/useCatalogs'
-import { useCollaborations, useCreateCollaboration } from '../hooks/useCollaborations'
+import { useCancelCollaboration, useCollaborations, useCreateCollaboration } from '../hooks/useCollaborations'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { useDiscoveryMusicians } from '../hooks/useDiscoveryMusicians'
-import { getCollaborationStateForUser } from '../lib/collaboration-state'
+import { getCollaborationStateForUser, getPendingSentCollaborationForUser } from '../lib/collaboration-state'
 import { getGenderLabel } from '../lib/gender'
 import type { InstrumentCatalogItem } from '../types/catalog'
 import type { DiscoveryMusicianResponse } from '../types/discovery'
 import type { Musician } from '../types/musician'
+import type { Collaboration } from '../types/collaboration'
 
-const allCitiesOption = 'Todas'
 type DiscoveryAppliedFilters = {
   search: string
   instruments: string[]
   styles: string[]
-  city: string
   useDistance: boolean
   radiusKm: number
+}
+
+type CancelRequestTarget = {
+  collaboration: Collaboration
+  musician: Musician
 }
 
 const defaultDiscoveryFilters: DiscoveryAppliedFilters = {
   search: '',
   instruments: [],
   styles: [],
-  city: allCitiesOption,
   useDistance: false,
   radiusKm: 50,
 }
@@ -44,6 +47,7 @@ const photoTones = [
 export function DiscoverPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
+  const [cancelRequestTarget, setCancelRequestTarget] = useState<CancelRequestTarget | null>(null)
   const [connectingUserId, setConnectingUserId] = useState<string | null>(null)
   const [collaborationMessage, setCollaborationMessage] = useState<string | null>(null)
 
@@ -51,6 +55,7 @@ export function DiscoverPage() {
   const { data: catalogInstruments = [] } = useInstruments()
   const { data: catalogStyles = [] } = useStyles()
   const { data: collaborationsResult } = useCollaborations()
+  const cancelCollaborationMutation = useCancelCollaboration()
   const createCollaborationMutation = useCreateCollaboration()
   const collaborations = collaborationsResult?.items ?? []
   const canUseDistanceFilter =
@@ -71,10 +76,9 @@ export function DiscoverPage() {
 
   const discoveryFilters = useMemo(
     () => ({
-      ...(appliedFilters.city !== allCitiesOption ?{ city: appliedFilters.city } : {}),
       ...(appliedFilters.useDistance && canUseDistanceFilter ?{ radiusKm: appliedFilters.radiusKm } : {}),
     }),
-    [appliedFilters.city, appliedFilters.radiusKm, appliedFilters.useDistance, canUseDistanceFilter],
+    [appliedFilters.radiusKm, appliedFilters.useDistance, canUseDistanceFilter],
   )
 
   const {
@@ -94,18 +98,6 @@ export function DiscoverPage() {
     () => catalogStyles.map((style) => style.name).sort(compareDisplayText),
     [catalogStyles],
   )
-
-  const cityOptions = useMemo(() => {
-    const cities = new Set(
-      musicians.map((musician) => musician.city).filter((city) => city !== 'Cidade não informada'),
-    )
-
-    if (appliedFilters.city !== allCitiesOption) {
-      cities.add(appliedFilters.city)
-    }
-
-    return [allCitiesOption, ...Array.from(cities).sort(compareDisplayText)]
-  }, [appliedFilters.city, musicians])
 
   const filteredMusicians = useMemo(() => {
     const normalizedSearch = appliedFilters.search.trim().toLowerCase()
@@ -129,9 +121,8 @@ export function DiscoverPage() {
       const matchesStyle =
         appliedFilters.styles.length === 0 ||
         appliedFilters.styles.some((style) => musician.styles.includes(style))
-      const matchesCity = appliedFilters.city === allCitiesOption || musician.city === appliedFilters.city
 
-      return matchesSearch && matchesInstrument && matchesStyle && matchesCity
+      return matchesSearch && matchesInstrument && matchesStyle
     })
   }, [appliedFilters, musicians])
 
@@ -139,7 +130,6 @@ export function DiscoverPage() {
     appliedFilters.search.trim().length > 0 ||
     appliedFilters.instruments.length > 0 ||
     appliedFilters.styles.length > 0 ||
-    appliedFilters.city !== allCitiesOption ||
     (appliedFilters.useDistance && canUseDistanceFilter)
   const activeFilterCount = getAppliedFilterChips(appliedFilters, canUseDistanceFilter).length
 
@@ -180,10 +170,6 @@ export function DiscoverPage() {
       applyFilters({ ...appliedFilters, styles: appliedFilters.styles.filter((style) => style !== chip.value) })
     }
 
-    if (chip.type === 'city') {
-      applyFilters({ ...appliedFilters, city: allCitiesOption })
-    }
-
     if (chip.type === 'distance') {
       applyFilters({ ...appliedFilters, useDistance: false, radiusKm: 50 })
     }
@@ -211,6 +197,33 @@ export function DiscoverPage() {
         },
       },
     )
+  }
+
+  function requestCancelCollaboration(musician: Musician) {
+    const collaboration = getPendingSentCollaborationForUser(collaborations, musician.userId)
+
+    if (!collaboration) {
+      setCollaborationMessage('Não foi possível encontrar o convite pendente para cancelar.')
+      return
+    }
+
+    setCancelRequestTarget({ collaboration, musician })
+  }
+
+  function confirmCancelCollaboration() {
+    if (!cancelRequestTarget) {
+      return
+    }
+
+    cancelCollaborationMutation.mutate(cancelRequestTarget.collaboration.id, {
+      onSuccess: () => {
+        setCollaborationMessage(`Solicitação para ${cancelRequestTarget.musician.name} cancelada.`)
+        setCancelRequestTarget(null)
+      },
+      onError: () => {
+        setCollaborationMessage('Não foi possível cancelar a solicitação agora.')
+      },
+    })
   }
 
   return (
@@ -275,7 +288,6 @@ export function DiscoverPage() {
         <FilterDialog
           appliedFilters={appliedFilters}
           canUseDistanceFilter={canUseDistanceFilter}
-          cityOptions={cityOptions}
           instrumentItems={catalogInstruments}
           onApply={(filters) => {
             applyFilters(filters)
@@ -283,6 +295,15 @@ export function DiscoverPage() {
           }}
           onClose={() => setIsFilterDialogOpen(false)}
           styleOptions={styleOptions}
+        />
+      ) : null}
+
+      {cancelRequestTarget ? (
+        <CancelCollaborationDialog
+          isCanceling={cancelCollaborationMutation.isPending}
+          musicianName={cancelRequestTarget.musician.name}
+          onClose={() => setCancelRequestTarget(null)}
+          onConfirm={confirmCancelCollaboration}
         />
       ) : null}
 
@@ -318,9 +339,15 @@ export function DiscoverPage() {
           {filteredMusicians.map((musician) => (
             <MusicianCard
               collaborationState={getCollaborationStateForUser(collaborations, musician.userId)}
+              isCancelingRequest={
+                cancelCollaborationMutation.isPending &&
+                cancelRequestTarget?.collaboration.id ===
+                  getPendingSentCollaborationForUser(collaborations, musician.userId)?.id
+              }
               key={musician.id}
               isConnecting={connectingUserId === musician.userId}
               musician={musician}
+              onCancelRequest={requestCancelCollaboration}
               onConnect={handleConnect}
             />
           ))}
@@ -380,8 +407,65 @@ function formatExperience(experience: number | null) {
 type AppliedFilterChip = {
   id: string
   label: string
-  type: 'search' | 'instrument' | 'style' | 'city' | 'distance'
+  type: 'search' | 'instrument' | 'style' | 'distance'
   value?: string
+}
+
+type CancelCollaborationDialogProps = {
+  isCanceling: boolean
+  musicianName: string
+  onClose: () => void
+  onConfirm: () => void
+}
+
+function CancelCollaborationDialog({
+  isCanceling,
+  musicianName,
+  onClose,
+  onConfirm,
+}: CancelCollaborationDialogProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
+      <section
+        aria-label="Cancelar solicitação de colaboração"
+        aria-modal="true"
+        className="w-full max-w-md rounded-lg border border-zinc-800 bg-[#181818] p-5 shadow-2xl shadow-black/50"
+        role="dialog"
+      >
+        <div className="flex items-start gap-3">
+          <div className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-red-950/50 text-red-200">
+            <AlertTriangle size={20} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-white">Cancelar solicitação?</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+              A solicitação enviada para {musicianName} será cancelada. Você poderá enviar um novo convite depois.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            className="inline-flex items-center justify-center rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-bold text-zinc-100 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"
+            disabled={isCanceling}
+            onClick={onClose}
+            type="button"
+          >
+            Manter solicitação
+          </button>
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-400 px-4 py-2.5 text-sm font-bold text-[#141414] transition hover:bg-red-300 disabled:cursor-not-allowed disabled:opacity-70"
+            disabled={isCanceling}
+            onClick={onConfirm}
+            type="button"
+          >
+            <X size={16} />
+            {isCanceling ? 'Cancelando...' : 'Cancelar solicitação'}
+          </button>
+        </div>
+      </section>
+    </div>
+  )
 }
 
 type AppliedFiltersProps = {
@@ -434,7 +518,6 @@ function AppliedFilters({ canUseDistanceFilter, filters, onClear, onRemove }: Ap
 type FilterDialogProps = {
   appliedFilters: DiscoveryAppliedFilters
   canUseDistanceFilter: boolean
-  cityOptions: string[]
   instrumentItems: InstrumentCatalogItem[]
   onApply: (filters: DiscoveryAppliedFilters) => void
   onClose: () => void
@@ -444,7 +527,6 @@ type FilterDialogProps = {
 function FilterDialog({
   appliedFilters,
   canUseDistanceFilter,
-  cityOptions,
   instrumentItems,
   onApply,
   onClose,
@@ -552,14 +634,6 @@ function FilterDialog({
               selectedOptions={draftFilters.styles}
             />
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <FilterSelect
-                label="Cidade"
-                onChange={(city) => setDraftFilters((currentFilters) => ({ ...currentFilters, city }))}
-                options={cityOptions}
-                value={draftFilters.city}
-              />
-            </div>
           </div>
         </div>
 
@@ -695,33 +769,6 @@ function FeedbackState({ title, description, action }: FeedbackStateProps) {
   )
 }
 
-type FilterSelectProps = {
-  label: string
-  value: string
-  options: string[]
-  formatOption?: (option: string) => string
-  onChange: (value: string) => void
-}
-
-function FilterSelect({ label, value, options, formatOption = (option) => option, onChange }: FilterSelectProps) {
-  return (
-    <label className="min-w-40">
-      <span className="mb-2 block text-sm font-semibold text-zinc-100">{label}</span>
-      <select
-        className="w-full rounded-lg border border-zinc-700 bg-[#141414] px-3 py-2.5 text-sm font-semibold text-zinc-100 outline-none transition focus:border-[#1DC95A] focus:ring-2 focus:ring-[#1DC95A]/20"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {formatOption(option)}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
-}
-
 function parseDiscoveryFilters(searchParams: URLSearchParams): DiscoveryAppliedFilters {
   const radiusKm = Number(searchParams.get('radiusKm') ?? defaultDiscoveryFilters.radiusKm)
 
@@ -729,7 +776,6 @@ function parseDiscoveryFilters(searchParams: URLSearchParams): DiscoveryAppliedF
     search: searchParams.get('q') ?? '',
     instruments: searchParams.getAll('instrument').filter(Boolean),
     styles: searchParams.getAll('style').filter(Boolean),
-    city: searchParams.get('city') || allCitiesOption,
     useDistance: searchParams.get('distance') === '1',
     radiusKm: Number.isFinite(radiusKm) ? clampRadiusKm(radiusKm) : defaultDiscoveryFilters.radiusKm,
   }
@@ -748,10 +794,6 @@ function createDiscoverySearchParams(filters: DiscoveryAppliedFilters) {
 
   for (const style of filters.styles) {
     params.append('style', style)
-  }
-
-  if (filters.city !== allCitiesOption) {
-    params.set('city', filters.city)
   }
 
   if (filters.useDistance) {
@@ -787,10 +829,6 @@ function getAppliedFilterChips(filters: DiscoveryAppliedFilters, canUseDistanceF
     })),
   )
 
-  if (filters.city !== allCitiesOption) {
-    chips.push({ id: 'city', label: `Cidade: ${filters.city}`, type: 'city' })
-  }
-
   if (filters.useDistance && canUseDistanceFilter) {
     chips.push({ id: 'distance', label: `Distância: até ${filters.radiusKm} km`, type: 'distance' })
   }
@@ -801,7 +839,6 @@ function getAppliedFilterChips(filters: DiscoveryAppliedFilters, canUseDistanceF
 function areDiscoveryFiltersEqual(firstFilters: DiscoveryAppliedFilters, secondFilters: DiscoveryAppliedFilters) {
   return (
     firstFilters.search === secondFilters.search &&
-    firstFilters.city === secondFilters.city &&
     firstFilters.useDistance === secondFilters.useDistance &&
     firstFilters.radiusKm === secondFilters.radiusKm &&
     areStringArraysEqual(firstFilters.instruments, secondFilters.instruments) &&

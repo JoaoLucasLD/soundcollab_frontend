@@ -1,4 +1,4 @@
-import { Check, Heart, MailCheck, MapPin, MessageCircle, Trophy, UserRound } from 'lucide-react'
+import { Check, Heart, MailCheck, MapPin, MessageCircle, Trophy, UserRound, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { MusicianCollaborationState } from '../lib/collaboration-state'
 import { capitalizeDisplayName } from '../lib/text-format'
@@ -8,14 +8,18 @@ import { Tag } from './ui/Tag'
 type MusicianCardProps = {
   musician: Musician
   collaborationState?: MusicianCollaborationState
+  isCancelingRequest?: boolean
   isConnecting?: boolean
+  onCancelRequest?: (musician: Musician) => void
   onConnect?: (musician: Musician) => void
 }
 
 export function MusicianCard({
   musician,
   collaborationState = 'NONE',
+  isCancelingRequest = false,
   isConnecting = false,
+  onCancelRequest,
   onConnect,
 }: MusicianCardProps) {
   const connectButton = getConnectButtonState(collaborationState, isConnecting)
@@ -85,6 +89,26 @@ export function MusicianCard({
               <MessageCircle size={17} />
               Responder
             </Link>
+          ) : collaborationState === 'PENDING_SENT' ? (
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1DC95A] px-4 py-3 text-sm font-bold text-[#141414] shadow-sm transition disabled:cursor-not-allowed disabled:opacity-70"
+                disabled
+                type="button"
+              >
+                <MailCheck size={17} />
+                Enviado
+              </button>
+              <button
+                aria-label={`Cancelar solicitação para ${musician.name}`}
+                className="inline-flex size-12 items-center justify-center rounded-lg border border-zinc-700 bg-[#141414] text-zinc-100 transition hover:border-red-400/60 hover:bg-red-950/30 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={isCancelingRequest}
+                onClick={() => onCancelRequest?.(musician)}
+                type="button"
+              >
+                <X size={17} />
+              </button>
+            </div>
           ) : (
             <button
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1DC95A] px-4 py-3 text-sm font-bold text-[#141414] shadow-sm transition hover:bg-[#1CB352] disabled:cursor-not-allowed disabled:opacity-70"

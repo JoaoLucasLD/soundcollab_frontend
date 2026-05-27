@@ -259,11 +259,18 @@ export function ProfilePage() {
     saveMutation.mutate({
       type: 'profile',
       payload: {
-        city: result.data.city || undefined,
+        city: result.data.city || null,
         latitude: cityLatitudeValue,
         longitude: cityLongitudeValue,
       },
     })
+  }
+
+  function removeCity() {
+    setCityValue('')
+    setCityLatitudeValue(null)
+    setCityLongitudeValue(null)
+    saveMutation.mutate({ type: 'profile', payload: { city: null, latitude: null, longitude: null } })
   }
 
   function saveGender() {
@@ -463,6 +470,14 @@ export function ProfilePage() {
                     Selecione uma sugestão para atualizar as coordenadas usadas no filtro por distância.
                   </p>
                 </FormField>
+                <button
+                  className="mt-3 inline-flex items-center justify-center rounded-lg border border-zinc-700 px-3 py-2 text-sm font-bold text-zinc-100 transition hover:border-red-400/60 hover:bg-red-950/30 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={isSaving || (!profile?.city && !hasCityCoordinates)}
+                  onClick={removeCity}
+                  type="button"
+                >
+                  Remover localização
+                </button>
               </InlineEditorPanel>
             ) : (
               <>
@@ -1238,4 +1253,3 @@ function normalizeInstrumentCategoryName(categoryName: string) {
     .trim()
     .toLowerCase()
 }
-

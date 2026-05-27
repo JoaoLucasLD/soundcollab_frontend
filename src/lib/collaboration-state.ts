@@ -30,3 +30,21 @@ export function getCollaborationStateForUser(
 
   return pendingCollaboration.direction === 'RECEIVED' ? 'PENDING_RECEIVED' : 'PENDING_SENT'
 }
+
+export function getPendingSentCollaborationForUser(
+  collaborations: Collaboration[],
+  musicianUserId: string | null | undefined,
+) {
+  if (!musicianUserId) {
+    return null
+  }
+
+  return (
+    collaborations.find(
+      (collaboration) =>
+        collaboration.status === 'PENDING' &&
+        collaboration.direction === 'SENT' &&
+        (collaboration.receiverId === musicianUserId || collaboration.receiver?.userId === musicianUserId),
+    ) ?? null
+  )
+}
