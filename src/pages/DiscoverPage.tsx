@@ -1,5 +1,7 @@
-import { RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { Check, RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { InstrumentCategoryPicker } from '../components/InstrumentCategoryPicker'
 import { MusicianCard } from '../components/MusicianCard'
 import { PageHeader } from '../components/ui/PageHeader'
 import { useInstruments, useStyles } from '../hooks/useCatalogs'
@@ -7,16 +9,30 @@ import { useCollaborations, useCreateCollaboration } from '../hooks/useCollabora
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { useDiscoveryMusicians } from '../hooks/useDiscoveryMusicians'
 import { getCollaborationStateForUser } from '../lib/collaboration-state'
-import { genderOptions, getGenderLabel } from '../lib/gender'
+import { getGenderLabel } from '../lib/gender'
+import type { InstrumentCatalogItem } from '../types/catalog'
 import type { DiscoveryMusicianResponse } from '../types/discovery'
 import type { Musician } from '../types/musician'
-import type { Gender } from '../types/profile'
 
-const allInstrumentsOption = 'Todos'
-const allStylesOption = 'Todos'
 const allCitiesOption = 'Todas'
-const allGendersOption = 'Todos' as const
-type GenderFilter = Gender | typeof allGendersOption
+type DiscoveryAppliedFilters = {
+  search: string
+  instruments: string[]
+  styles: string[]
+  city: string
+  useDistance: boolean
+  radiusKm: number
+}
+
+const defaultDiscoveryFilters: DiscoveryAppliedFilters = {
+  search: '',
+  instruments: [],
+  styles: [],
+  city: allCitiesOption,
+  useDistance: false,
+  radiusKm: 50,
+}
+const discoveryFiltersStorageKey = 'soundcollab:discovery-filters'
 
 const photoTones = [
   'from-[#1DC95A] via-[#18592F] to-[#141414]',
@@ -26,13 +42,8 @@ const photoTones = [
 ]
 
 export function DiscoverPage() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [instrumentFilter, setInstrumentFilter] = useState(allInstrumentsOption)
-  const [styleFilter, setStyleFilter] = useState(allStylesOption)
-  const [cityFilter, setCityFilter] = useState(allCitiesOption)
-  const [genderFilter, setGenderFilter] = useState<GenderFilter>(allGendersOption)
-  const [useDistanceFilter, setUseDistanceFilter] = useState(false)
-  const [radiusKm, setRadiusKm] = useState(50)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
   const [connectingUserId, setConnectingUserId] = useState<string | null>(null)
   const [collaborationMessage, setCollaborationMessage] = useState<string | null>(null)
 
@@ -44,16 +55,26 @@ export function DiscoverPage() {
   const collaborations = collaborationsResult?.items ?? []
   const canUseDistanceFilter =
     typeof currentUser?.profile?.latitude === 'number' && typeof currentUser.profile.longitude === 'number'
+  const appliedFilters = useMemo(() => parseDiscoveryFilters(searchParams), [searchParams])
+
+  useEffect(() => {
+    if (searchParams.toString()) {
+      return
+    }
+
+    const storedFilters = window.localStorage.getItem(discoveryFiltersStorageKey)
+
+    if (storedFilters) {
+      setSearchParams(storedFilters)
+    }
+  }, [searchParams, setSearchParams])
 
   const discoveryFilters = useMemo(
     () => ({
-      ...(instrumentFilter !== allInstrumentsOption ?{ instrument: instrumentFilter } : {}),
-      ...(styleFilter !== allStylesOption ?{ style: styleFilter } : {}),
-      ...(cityFilter !== allCitiesOption ?{ city: cityFilter } : {}),
-      ...(genderFilter !== allGendersOption ?{ gender: genderFilter } : {}),
-      ...(useDistanceFilter && canUseDistanceFilter ?{ radiusKm } : {}),
+      ...(appliedFilters.city !== allCitiesOption ?{ city: appliedFilters.city } : {}),
+      ...(appliedFilters.useDistance && canUseDistanceFilter ?{ radiusKm: appliedFilters.radiusKm } : {}),
     }),
-    [canUseDistanceFilter, cityFilter, genderFilter, instrumentFilter, radiusKm, styleFilter, useDistanceFilter],
+    [appliedFilters.city, appliedFilters.radiusKm, appliedFilters.useDistance, canUseDistanceFilter],
   )
 
   const {
@@ -69,13 +90,8 @@ export function DiscoverPage() {
     [discoveryResult?.musicians],
   )
 
-  const instrumentOptions = useMemo(
-    () => [allInstrumentsOption, ...catalogInstruments.map((instrument) => instrument.name)],
-    [catalogInstruments],
-  )
-
   const styleOptions = useMemo(
-    () => [allStylesOption, ...catalogStyles.map((style) => style.name)],
+    () => catalogStyles.map((style) => style.name).sort(compareDisplayText),
     [catalogStyles],
   )
 
@@ -84,20 +100,15 @@ export function DiscoverPage() {
       musicians.map((musician) => musician.city).filter((city) => city !== 'Cidade não informada'),
     )
 
-    if (cityFilter !== allCitiesOption) {
-      cities.add(cityFilter)
+    if (appliedFilters.city !== allCitiesOption) {
+      cities.add(appliedFilters.city)
     }
 
-    return [allCitiesOption, ...Array.from(cities).sort((left, right) => left.localeCompare(right))]
-  }, [cityFilter, musicians])
-
-  const genderSelectOptions = useMemo(
-    () => [allGendersOption, ...genderOptions.map((option) => option.value)],
-    [],
-  )
+    return [allCitiesOption, ...Array.from(cities).sort(compareDisplayText)]
+  }, [appliedFilters.city, musicians])
 
   const filteredMusicians = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase()
+    const normalizedSearch = appliedFilters.search.trim().toLowerCase()
 
     return musicians.filter((musician) => {
       const searchableText = [
@@ -113,32 +124,69 @@ export function DiscoverPage() {
 
       const matchesSearch = normalizedSearch.length === 0 || searchableText.includes(normalizedSearch)
       const matchesInstrument =
-        instrumentFilter === allInstrumentsOption || musician.instruments.includes(instrumentFilter)
-      const matchesStyle = styleFilter === allStylesOption || musician.styles.includes(styleFilter)
-      const matchesCity = cityFilter === allCitiesOption || musician.city === cityFilter
-      const matchesGender =
-        genderFilter === allGendersOption || musician.gender === getGenderLabel(genderFilter as Gender)
+        appliedFilters.instruments.length === 0 ||
+        appliedFilters.instruments.some((instrument) => musician.instruments.includes(instrument))
+      const matchesStyle =
+        appliedFilters.styles.length === 0 ||
+        appliedFilters.styles.some((style) => musician.styles.includes(style))
+      const matchesCity = appliedFilters.city === allCitiesOption || musician.city === appliedFilters.city
 
-      return matchesSearch && matchesInstrument && matchesStyle && matchesCity && matchesGender
+      return matchesSearch && matchesInstrument && matchesStyle && matchesCity
     })
-  }, [cityFilter, genderFilter, instrumentFilter, musicians, searchTerm, styleFilter])
+  }, [appliedFilters, musicians])
 
   const hasFilters =
-    searchTerm.trim().length > 0 ||
-    instrumentFilter !== allInstrumentsOption ||
-    styleFilter !== allStylesOption ||
-    cityFilter !== allCitiesOption ||
-    genderFilter !== allGendersOption ||
-    (useDistanceFilter && canUseDistanceFilter)
+    appliedFilters.search.trim().length > 0 ||
+    appliedFilters.instruments.length > 0 ||
+    appliedFilters.styles.length > 0 ||
+    appliedFilters.city !== allCitiesOption ||
+    (appliedFilters.useDistance && canUseDistanceFilter)
+  const activeFilterCount = getAppliedFilterChips(appliedFilters, canUseDistanceFilter).length
 
   function clearFilters() {
-    setSearchTerm('')
-    setInstrumentFilter(allInstrumentsOption)
-    setStyleFilter(allStylesOption)
-    setCityFilter(allCitiesOption)
-    setGenderFilter(allGendersOption)
-    setUseDistanceFilter(false)
-    setRadiusKm(50)
+    window.localStorage.removeItem(discoveryFiltersStorageKey)
+    setSearchParams(createDiscoverySearchParams(defaultDiscoveryFilters))
+  }
+
+  function applyFilters(filters: DiscoveryAppliedFilters) {
+    const nextSearchParams = createDiscoverySearchParams(filters)
+
+    if (nextSearchParams.toString()) {
+      window.localStorage.setItem(discoveryFiltersStorageKey, nextSearchParams.toString())
+    } else {
+      window.localStorage.removeItem(discoveryFiltersStorageKey)
+    }
+
+    setSearchParams(nextSearchParams)
+  }
+
+  function updateSearchTerm(search: string) {
+    applyFilters({ ...appliedFilters, search })
+  }
+
+  function removeAppliedFilter(chip: AppliedFilterChip) {
+    if (chip.type === 'search') {
+      applyFilters({ ...appliedFilters, search: '' })
+    }
+
+    if (chip.type === 'instrument') {
+      applyFilters({
+        ...appliedFilters,
+        instruments: appliedFilters.instruments.filter((instrument) => instrument !== chip.value),
+      })
+    }
+
+    if (chip.type === 'style') {
+      applyFilters({ ...appliedFilters, styles: appliedFilters.styles.filter((style) => style !== chip.value) })
+    }
+
+    if (chip.type === 'city') {
+      applyFilters({ ...appliedFilters, city: allCitiesOption })
+    }
+
+    if (chip.type === 'distance') {
+      applyFilters({ ...appliedFilters, useDistance: false, radiusKm: 50 })
+    }
   }
 
   function handleConnect(musician: Musician) {
@@ -177,43 +225,33 @@ export function DiscoverPage() {
       />
 
       <section className="mb-6 rounded-lg border border-zinc-800 bg-[#181818] p-4 shadow-sm shadow-black/30">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(240px,1.4fr)_repeat(4,minmax(140px,1fr))_minmax(260px,1.4fr)_auto] xl:items-end">
+        <div className="grid gap-4 lg:grid-cols-[minmax(240px,1fr)_auto_auto] lg:items-end">
           <label>
             <span className="mb-2 block text-sm font-semibold text-zinc-100">Buscar</span>
             <div className="flex items-center gap-3 rounded-lg border border-zinc-700 bg-[#141414] px-3 py-2.5">
               <Search className="text-zinc-400" size={19} />
               <input
                 className="w-full bg-transparent text-sm text-white outline-none placeholder:text-zinc-500"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
+                value={appliedFilters.search}
+                onChange={(event) => updateSearchTerm(event.target.value)}
                 placeholder="Nome, instrumento, estilo ou cidade"
               />
             </div>
           </label>
 
-          <FilterSelect
-            label="Instrumento"
-            value={instrumentFilter}
-            options={instrumentOptions}
-            onChange={setInstrumentFilter}
-          />
-          <FilterSelect label="Estilo" value={styleFilter} options={styleOptions} onChange={setStyleFilter} />
-          <FilterSelect label="Cidade" value={cityFilter} options={cityOptions} onChange={setCityFilter} />
-          <FilterSelect
-            label="Gênero"
-            value={genderFilter}
-            options={genderSelectOptions}
-            formatOption={(option) => (option === allGendersOption ? option : getGenderLabel(option as Gender))}
-            onChange={(value) => setGenderFilter(value as GenderFilter)}
-          />
-
-          <DistanceFilter
-            canUseDistanceFilter={canUseDistanceFilter}
-            isEnabled={useDistanceFilter}
-            radiusKm={radiusKm}
-            onEnabledChange={setUseDistanceFilter}
-            onRadiusChange={setRadiusKm}
-          />
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-bold text-zinc-100 transition hover:border-[#1DC95A]/60 hover:bg-[#1DC95A]/10"
+            onClick={() => setIsFilterDialogOpen(true)}
+            type="button"
+          >
+            <SlidersHorizontal size={17} />
+            Filtros
+            {activeFilterCount > 0 ? (
+              <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-[#1DC95A] px-1.5 text-xs text-[#141414]">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </button>
 
           <button
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-bold text-zinc-100 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -224,7 +262,29 @@ export function DiscoverPage() {
             Limpar
           </button>
         </div>
+
+        <AppliedFilters
+          canUseDistanceFilter={canUseDistanceFilter}
+          filters={appliedFilters}
+          onClear={clearFilters}
+          onRemove={removeAppliedFilter}
+        />
       </section>
+
+      {isFilterDialogOpen ? (
+        <FilterDialog
+          appliedFilters={appliedFilters}
+          canUseDistanceFilter={canUseDistanceFilter}
+          cityOptions={cityOptions}
+          instrumentItems={catalogInstruments}
+          onApply={(filters) => {
+            applyFilters(filters)
+            setIsFilterDialogOpen(false)
+          }}
+          onClose={() => setIsFilterDialogOpen(false)}
+          styleOptions={styleOptions}
+        />
+      ) : null}
 
       {collaborationMessage  ? (
         <div className="mb-6 rounded-lg border border-zinc-700 bg-[#181818] px-4 py-3 text-sm text-zinc-100">
@@ -317,6 +377,260 @@ function formatExperience(experience: number | null) {
   return `${experience} anos de experiência`
 }
 
+type AppliedFilterChip = {
+  id: string
+  label: string
+  type: 'search' | 'instrument' | 'style' | 'city' | 'distance'
+  value?: string
+}
+
+type AppliedFiltersProps = {
+  canUseDistanceFilter: boolean
+  filters: DiscoveryAppliedFilters
+  onClear: () => void
+  onRemove: (chip: AppliedFilterChip) => void
+}
+
+function AppliedFilters({ canUseDistanceFilter, filters, onClear, onRemove }: AppliedFiltersProps) {
+  const chips = getAppliedFilterChips(filters, canUseDistanceFilter)
+
+  return (
+    <div className="mt-4 border-t border-zinc-800 pt-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-sm font-bold text-zinc-100">Filtros aplicados</h2>
+        {chips.length > 0 ? (
+          <button
+            className="inline-flex items-center gap-2 text-sm font-bold text-zinc-300 transition hover:text-white"
+            onClick={onClear}
+            type="button"
+          >
+            <X size={15} />
+            Limpar filtros
+          </button>
+        ) : null}
+      </div>
+
+      {chips.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {chips.map((chip) => (
+            <button
+              className="inline-flex max-w-full items-center gap-2 rounded-lg border border-zinc-700 bg-[#141414] px-3 py-2 text-sm font-semibold text-zinc-100 transition hover:border-[#1DC95A]/60 hover:bg-[#1DC95A]/10"
+              key={chip.id}
+              onClick={() => onRemove(chip)}
+              type="button"
+            >
+              <span className="truncate">{chip.label}</span>
+              <X className="shrink-0 text-zinc-400" size={14} />
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-zinc-500">Nenhum filtro aplicado.</p>
+      )}
+    </div>
+  )
+}
+
+type FilterDialogProps = {
+  appliedFilters: DiscoveryAppliedFilters
+  canUseDistanceFilter: boolean
+  cityOptions: string[]
+  instrumentItems: InstrumentCatalogItem[]
+  onApply: (filters: DiscoveryAppliedFilters) => void
+  onClose: () => void
+  styleOptions: string[]
+}
+
+function FilterDialog({
+  appliedFilters,
+  canUseDistanceFilter,
+  cityOptions,
+  instrumentItems,
+  onApply,
+  onClose,
+  styleOptions,
+}: FilterDialogProps) {
+  const [draftFilters, setDraftFilters] = useState(appliedFilters)
+  const hasPendingChanges = !areDiscoveryFiltersEqual(appliedFilters, draftFilters)
+
+  useEffect(() => {
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      if (!hasPendingChanges) {
+        return
+      }
+
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasPendingChanges])
+
+  function closeDialog() {
+    if (hasPendingChanges && !window.confirm('Descartar alterações nos filtros?')) {
+      return
+    }
+
+    onClose()
+  }
+
+  function clearDraftFilters() {
+    setDraftFilters(defaultDiscoveryFilters)
+  }
+
+  function toggleInstrument(instrument: string) {
+    setDraftFilters((currentFilters) => ({
+      ...currentFilters,
+      instruments: toggleString(currentFilters.instruments, instrument),
+    }))
+  }
+
+  function toggleStyle(style: string) {
+    setDraftFilters((currentFilters) => ({
+      ...currentFilters,
+      styles: toggleString(currentFilters.styles, style),
+    }))
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
+      <section
+        aria-label="Filtros de descoberta"
+        aria-modal="true"
+        className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-lg border border-zinc-800 bg-[#181818] shadow-2xl shadow-black/50"
+        role="dialog"
+      >
+        <header className="flex items-start justify-between gap-4 border-b border-zinc-800 px-5 py-4">
+          <div>
+            <h2 className="text-xl font-bold text-white">Filtros</h2>
+            <p className="mt-1 text-sm text-zinc-400">Escolha os atributos e aplique quando estiver pronto.</p>
+          </div>
+          <button
+            aria-label="Fechar filtros"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-700 text-zinc-200 transition hover:bg-zinc-800"
+            onClick={closeDialog}
+            type="button"
+          >
+            <X size={17} />
+          </button>
+        </header>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+          {hasPendingChanges ? (
+            <div className="mb-5 rounded-lg border border-[#1DC95A]/30 bg-[#1DC95A]/10 px-3 py-2 text-sm text-[#A7F3C1]">
+              Existem alterações pendentes.
+            </div>
+          ) : null}
+
+          <div className="grid gap-5">
+            <DistanceFilter
+              canUseDistanceFilter={canUseDistanceFilter}
+              isEnabled={draftFilters.useDistance}
+              onEnabledChange={(useDistance) =>
+                setDraftFilters((currentFilters) => ({ ...currentFilters, useDistance }))
+              }
+              onRadiusChange={(radiusKm) =>
+                setDraftFilters((currentFilters) => ({ ...currentFilters, radiusKm }))
+              }
+              radiusKm={draftFilters.radiusKm}
+            />
+
+            <InstrumentCategoryPicker
+              emptyText="Nenhum instrumento cadastrado"
+              getValue={(item) => item.name}
+              items={instrumentItems}
+              onToggleValue={toggleInstrument}
+              selectedValues={draftFilters.instruments}
+            />
+
+            <MultiFilterSection
+              emptyText="Nenhum estilo cadastrado"
+              label="Estilos musicais"
+              onToggle={toggleStyle}
+              options={styleOptions}
+              selectedOptions={draftFilters.styles}
+            />
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <FilterSelect
+                label="Cidade"
+                onChange={(city) => setDraftFilters((currentFilters) => ({ ...currentFilters, city }))}
+                options={cityOptions}
+                value={draftFilters.city}
+              />
+            </div>
+          </div>
+        </div>
+
+        <footer className="flex flex-col-reverse gap-3 border-t border-zinc-800 px-5 py-4 sm:flex-row sm:justify-end">
+          <button
+            className="inline-flex items-center justify-center rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-bold text-zinc-100 transition hover:bg-zinc-800"
+            onClick={closeDialog}
+            type="button"
+          >
+            Cancelar
+          </button>
+          <button
+            className="inline-flex items-center justify-center rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-bold text-zinc-100 transition hover:bg-zinc-800"
+            onClick={clearDraftFilters}
+            type="button"
+          >
+            Limpar
+          </button>
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1DC95A] px-4 py-2.5 text-sm font-bold text-[#141414] transition hover:bg-[#1CB352]"
+            onClick={() => onApply(draftFilters)}
+            type="button"
+          >
+            <Check size={16} />
+            Aplicar filtros
+          </button>
+        </footer>
+      </section>
+    </div>
+  )
+}
+
+type MultiFilterSectionProps = {
+  emptyText: string
+  label: string
+  onToggle: (option: string) => void
+  options: string[]
+  selectedOptions: string[]
+}
+
+function MultiFilterSection({ emptyText, label, onToggle, options, selectedOptions }: MultiFilterSectionProps) {
+  const selectedOptionSet = useMemo(() => new Set(selectedOptions), [selectedOptions])
+
+  return (
+    <fieldset className="rounded-lg border border-zinc-800 bg-[#141414] p-4">
+      <legend className="px-1 text-sm font-bold text-zinc-100">{label}</legend>
+      {options.length === 0 ? <p className="mt-3 text-sm text-zinc-500">{emptyText}</p> : null}
+      {options.length > 0 ? (
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {options.map((option) => {
+            const isSelected = selectedOptionSet.has(option)
+
+            return (
+              <button
+                aria-pressed={isSelected}
+                className={filterChoiceClassName(isSelected)}
+                key={option}
+                onClick={() => onToggle(option)}
+                type="button"
+              >
+                {isSelected ? <Check className="shrink-0" size={16} /> : null}
+                <span className="truncate">{option}</span>
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
+    </fieldset>
+  )
+}
+
 type DistanceFilterProps = {
   canUseDistanceFilter: boolean
   isEnabled: boolean
@@ -406,5 +720,122 @@ function FilterSelect({ label, value, options, formatOption = (option) => option
       </select>
     </label>
   )
+}
+
+function parseDiscoveryFilters(searchParams: URLSearchParams): DiscoveryAppliedFilters {
+  const radiusKm = Number(searchParams.get('radiusKm') ?? defaultDiscoveryFilters.radiusKm)
+
+  return {
+    search: searchParams.get('q') ?? '',
+    instruments: searchParams.getAll('instrument').filter(Boolean),
+    styles: searchParams.getAll('style').filter(Boolean),
+    city: searchParams.get('city') || allCitiesOption,
+    useDistance: searchParams.get('distance') === '1',
+    radiusKm: Number.isFinite(radiusKm) ? clampRadiusKm(radiusKm) : defaultDiscoveryFilters.radiusKm,
+  }
+}
+
+function createDiscoverySearchParams(filters: DiscoveryAppliedFilters) {
+  const params = new URLSearchParams()
+
+  if (filters.search.trim()) {
+    params.set('q', filters.search.trim())
+  }
+
+  for (const instrument of filters.instruments) {
+    params.append('instrument', instrument)
+  }
+
+  for (const style of filters.styles) {
+    params.append('style', style)
+  }
+
+  if (filters.city !== allCitiesOption) {
+    params.set('city', filters.city)
+  }
+
+  if (filters.useDistance) {
+    params.set('distance', '1')
+    params.set('radiusKm', String(filters.radiusKm))
+  }
+
+  return params
+}
+
+function getAppliedFilterChips(filters: DiscoveryAppliedFilters, canUseDistanceFilter: boolean): AppliedFilterChip[] {
+  const chips: AppliedFilterChip[] = []
+
+  if (filters.search.trim()) {
+    chips.push({ id: 'search', label: `Busca: ${filters.search.trim()}`, type: 'search' })
+  }
+
+  chips.push(
+    ...filters.instruments.map((instrument) => ({
+      id: `instrument-${instrument}`,
+      label: `Instrumento: ${instrument}`,
+      type: 'instrument' as const,
+      value: instrument,
+    })),
+  )
+
+  chips.push(
+    ...filters.styles.map((style) => ({
+      id: `style-${style}`,
+      label: `Estilo: ${style}`,
+      type: 'style' as const,
+      value: style,
+    })),
+  )
+
+  if (filters.city !== allCitiesOption) {
+    chips.push({ id: 'city', label: `Cidade: ${filters.city}`, type: 'city' })
+  }
+
+  if (filters.useDistance && canUseDistanceFilter) {
+    chips.push({ id: 'distance', label: `Distância: até ${filters.radiusKm} km`, type: 'distance' })
+  }
+
+  return chips
+}
+
+function areDiscoveryFiltersEqual(firstFilters: DiscoveryAppliedFilters, secondFilters: DiscoveryAppliedFilters) {
+  return (
+    firstFilters.search === secondFilters.search &&
+    firstFilters.city === secondFilters.city &&
+    firstFilters.useDistance === secondFilters.useDistance &&
+    firstFilters.radiusKm === secondFilters.radiusKm &&
+    areStringArraysEqual(firstFilters.instruments, secondFilters.instruments) &&
+    areStringArraysEqual(firstFilters.styles, secondFilters.styles)
+  )
+}
+
+function areStringArraysEqual(firstItems: string[], secondItems: string[]) {
+  if (firstItems.length !== secondItems.length) {
+    return false
+  }
+
+  const firstSet = new Set(firstItems)
+  return secondItems.every((item) => firstSet.has(item))
+}
+
+function toggleString(items: string[], item: string) {
+  return items.includes(item) ?items.filter((currentItem) => currentItem !== item) : [...items, item]
+}
+
+function clampRadiusKm(radiusKm: number) {
+  return Math.min(200, Math.max(5, radiusKm))
+}
+
+function filterChoiceClassName(isSelected: boolean) {
+  return [
+    'inline-flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-semibold transition',
+    isSelected
+      ?'border-[#1DC95A] bg-[#1DC95A] text-[#141414]'
+      : 'border-zinc-800 bg-[#181818] text-zinc-200 hover:bg-zinc-800',
+  ].join(' ')
+}
+
+function compareDisplayText(firstText: string, secondText: string) {
+  return firstText.localeCompare(secondText, 'pt-BR')
 }
 

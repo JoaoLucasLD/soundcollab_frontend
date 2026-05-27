@@ -1,11 +1,12 @@
 import axios from 'axios'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronLeft, ChevronRight, Music } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, type FieldPath, type UseFormRegister } from 'react-hook-form'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { CityAutocomplete } from '../components/CityAutocomplete'
+import { InstrumentCategoryPicker } from '../components/InstrumentCategoryPicker'
 import { useInstruments, useStyles } from '../hooks/useCatalogs'
 import { currentUserQueryKey, useCurrentUser } from '../hooks/useCurrentUser'
 import { availabilityPeriodOptions, availabilityTimeOptions } from '../lib/availability'
@@ -16,7 +17,7 @@ import { isProfileComplete } from '../lib/profile-completion'
 import { capitalizeDisplayName } from '../lib/text-format'
 import { getMe } from '../services/auth.service'
 import { replaceMyInstruments, replaceMyStyles, updateMyProfile } from '../services/profile.service'
-import type { CatalogItem, InstrumentCatalogItem } from '../types/catalog'
+import type { CatalogItem } from '../types/catalog'
 
 const collaborationGoalValues = [
   'BAND',
@@ -397,13 +398,13 @@ export function OnboardingProfilePage() {
 
             {activeStep === 2 ? (
               <div className="grid min-w-0 gap-5">
-                <InstrumentChoiceGroup
+                <InstrumentCategoryPicker
                   emptyText="Nenhum instrumento cadastrado"
                   error={errors.instrumentIds?.message}
                   isLoading={isLoadingInstruments}
                   items={instruments}
-                  onToggleInstrument={handleToggleInstrument}
-                  selectedInstrumentIds={selectedInstrumentIds}
+                  onToggleValue={handleToggleInstrument}
+                  selectedValues={selectedInstrumentIds}
                 />
                 <ChoiceGroup
                   emptyText="Nenhum estilo cadastrado"
@@ -662,168 +663,6 @@ function ChoiceGroup({
       {error ? <p className="mt-2 text-sm text-red-300">{error}</p> : null}
     </fieldset>
   )
-}
-
-type InstrumentChoiceGroupProps = {
-  emptyText: string
-  error?: string
-  isLoading: boolean
-  items: InstrumentCatalogItem[]
-  onToggleInstrument: (instrumentId: string) => void
-  selectedInstrumentIds: string[]
-}
-
-function InstrumentChoiceGroup({
-  emptyText,
-  error,
-  isLoading,
-  items,
-  onToggleInstrument,
-  selectedInstrumentIds,
-}: InstrumentChoiceGroupProps) {
-  const groupedItems = useMemo(() => groupInstrumentsByCategory(items), [items])
-  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null)
-  const selectedInstrumentSet = useMemo(() => new Set(selectedInstrumentIds), [selectedInstrumentIds])
-  const activeGroup =
-    groupedItems.find((group) => group.categoryId === activeCategoryId) ?? groupedItems[0] ?? null
-
-  useEffect(() => {
-    if (!activeGroup) {
-      setActiveCategoryId(null)
-      return
-    }
-
-    if (activeCategoryId !== activeGroup.categoryId) {
-      setActiveCategoryId(activeGroup.categoryId)
-    }
-  }, [activeCategoryId, activeGroup])
-
-  return (
-    <fieldset className="min-w-0 rounded-lg border border-zinc-800 bg-[#141414] p-4">
-      <legend className="px-1 text-sm font-semibold text-zinc-100">Instrumentos</legend>
-      {isLoading ? <p className="mt-3 text-sm text-zinc-400">Carregando...</p> : null}
-      {!isLoading && items.length === 0 ? <p className="mt-3 text-sm text-zinc-400">{emptyText}</p> : null}
-      {groupedItems.length > 0 ? (
-        <div className="mt-3 space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {groupedItems.map((group) => {
-              const selectedCount = group.items.filter((item) => selectedInstrumentSet.has(item.id)).length
-              const isActive = group.categoryId === activeGroup?.categoryId
-
-              return (
-                <button
-                  className={[
-                    'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-bold transition',
-                    isActive
-                      ? 'border-[#1DC95A] bg-[#1DC95A] text-[#141414]'
-                      : 'border-zinc-700 bg-[#181818] text-zinc-200 hover:bg-zinc-800',
-                  ].join(' ')}
-                  key={group.categoryId}
-                  onClick={() => setActiveCategoryId(group.categoryId)}
-                  type="button"
-                >
-                  {capitalizeDisplayName(group.categoryName)}
-                  {selectedCount > 0 ? (
-                    <span
-                      className={[
-                        'inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs',
-                        isActive ? 'bg-[#141414] text-[#1DC95A]' : 'bg-[#1DC95A] text-[#141414]',
-                      ].join(' ')}
-                    >
-                      {selectedCount}
-                    </span>
-                  ) : null}
-                </button>
-              )
-            })}
-          </div>
-
-          {activeGroup ? (
-            <div className="rounded-lg border border-zinc-800 bg-[#181818] p-3">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h3 className="text-sm font-bold text-zinc-100">{capitalizeDisplayName(activeGroup.categoryName)}</h3>
-                <p className="text-xs text-zinc-500">{activeGroup.items.length} opções</p>
-              </div>
-
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="listbox" aria-label={activeGroup.categoryName}>
-                {activeGroup.items.map((item) => {
-                  const isSelected = selectedInstrumentSet.has(item.id)
-
-                  return (
-                    <button
-                      aria-pressed={isSelected}
-                      className={[
-                        'min-w-0 rounded-lg border px-3 py-2 text-left text-sm font-semibold transition',
-                        isSelected
-                          ? 'border-[#1DC95A] bg-[#1DC95A] text-[#141414]'
-                          : 'border-zinc-800 bg-[#141414] text-zinc-200 hover:bg-zinc-800',
-                      ].join(' ')}
-                      key={item.id}
-                      onClick={() => onToggleInstrument(item.id)}
-                      type="button"
-                    >
-                      <span className="block truncate">{capitalizeDisplayName(item.name)}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-      {error ? <p className="mt-2 text-sm text-red-300">{error}</p> : null}
-    </fieldset>
-  )
-}
-
-function groupInstrumentsByCategory(items: InstrumentCatalogItem[]) {
-  const grouped = new Map<string, { categoryId: string; categoryName: string; items: InstrumentCatalogItem[] }>()
-
-  for (const item of items) {
-    const existingGroup = grouped.get(item.categoryId)
-
-    if (existingGroup) {
-      existingGroup.items.push(item)
-      continue
-    }
-
-    grouped.set(item.categoryId, {
-      categoryId: item.categoryId,
-      categoryName: item.category.name,
-      items: [item],
-    })
-  }
-
-  return Array.from(grouped.values()).sort((firstGroup, secondGroup) => {
-    const firstOrder = getInstrumentCategoryOrder(firstGroup.categoryName)
-    const secondOrder = getInstrumentCategoryOrder(secondGroup.categoryName)
-
-    if (firstOrder !== secondOrder) {
-      return firstOrder - secondOrder
-    }
-
-    return firstGroup.categoryName.localeCompare(secondGroup.categoryName, 'pt-BR')
-  })
-}
-
-function getInstrumentCategoryOrder(categoryName: string) {
-  const normalizedCategory = normalizeInstrumentCategoryName(categoryName)
-  const orderedCategories = ['teclas', 'vocal', 'percussao', 'cordas', 'producao', 'composicao', 'sopro']
-  const categoryIndex = orderedCategories.indexOf(normalizedCategory)
-
-  if (categoryIndex >= 0) {
-    return categoryIndex
-  }
-
-  return normalizedCategory === 'outros' ? orderedCategories.length + 1 : orderedCategories.length
-}
-
-function normalizeInstrumentCategoryName(categoryName: string) {
-  return categoryName
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-    .toLowerCase()
 }
 
 function normalizeOnboardingBirthDate(values: OnboardingFormValues) {

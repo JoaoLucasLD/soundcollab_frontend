@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+﻿import type { ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -564,7 +564,6 @@ export function ProfilePage() {
             ) : typeof experienceYears === 'number'  ? (
               <>
                 <p>{experienceYears} anos</p>
-                <p className="mt-2 text-sm text-zinc-400">Tempo de experiência informado no perfil</p>
               </>
             ) : (
               <p className="text-zinc-400">Experiência ainda não informada</p>
