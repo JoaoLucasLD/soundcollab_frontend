@@ -9,6 +9,9 @@ export type Musician = {
   experience: string
   instruments: string[]
   styles: string[]
+  collaborationGoals?: string[]
+  availabilityPeriods?: string[]
+  availabilityTimes?: string[]
   bio: string
   photoTone: string
   photoLabel: string

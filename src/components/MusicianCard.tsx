@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import type { MusicianCollaborationState } from '../lib/collaboration-state'
 import { capitalizeDisplayName } from '../lib/text-format'
 import type { Musician } from '../types/musician'
+import { ProfileAvatar } from './ui/ProfileAvatar'
 import { Tag } from './ui/Tag'
 
 type MusicianCardProps = {
@@ -23,12 +24,11 @@ export function MusicianCard({
   onConnect,
 }: MusicianCardProps) {
   const connectButton = getConnectButtonState(collaborationState, isConnecting)
+  const collaborationGoals = musician.collaborationGoals ?? []
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-lg border border-zinc-800 bg-[#181818] shadow-sm shadow-black/30">
-      <div className={`relative aspect-[4/3] overflow-hidden bg-gradient-to-br ${musician.photoTone}`}>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(255,255,255,0.55),transparent_28%),radial-gradient(circle_at_80%_25%,rgba(255,255,255,0.22),transparent_30%)]" />
-      </div>
+      <ProfileAvatar label={capitalizeDisplayName(musician.photoLabel)} name={musician.name} seed={musician.userId ?? musician.id} />
 
       <div className="flex flex-1 flex-col space-y-4 p-5">
         <div>
@@ -70,6 +70,20 @@ export function MusicianCard({
             ))}
           </div>
         </div>
+
+        {collaborationGoals.length > 0 ? (
+          <div>
+            <p className="mb-2 text-xs text-zinc-400">Objetivos:</p>
+            <div className="flex flex-wrap gap-2">
+              {collaborationGoals.slice(0, 2).map((goal) => (
+                <Tag key={goal}>{goal}</Tag>
+              ))}
+              {collaborationGoals.length > 2 ? (
+                <Tag>{`+${collaborationGoals.length - 2} objetivo(s)`}</Tag>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         <p className="min-h-12 text-sm leading-relaxed text-zinc-200">{musician.bio}</p>
 

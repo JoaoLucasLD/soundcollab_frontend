@@ -8,17 +8,18 @@ import {
   MapPin,
   MessageCircle,
   Music,
-  Sparkles,
   Target,
   Trophy,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../components/ui/PageHeader'
+import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { Tag } from '../components/ui/Tag'
 import { useCollaborations, useCreateCollaboration } from '../hooks/useCollaborations'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { formatAvailabilitySummary } from '../lib/availability'
+import { getCollaborationGoalLabel } from '../lib/collaboration-goals'
 import { getCollaborationStateForUser, type MusicianCollaborationState } from '../lib/collaboration-state'
 import { getGenderLabel } from '../lib/gender'
 import { capitalizeDisplayName } from '../lib/text-format'
@@ -57,6 +58,7 @@ export function MusicianProfilePage() {
   const about = profile?.bio || profile?.preferences || 'Perfil musical em construção.'
   const mainInstrument = profile?.instruments[0] ?? 'Música'
   const gender = getGenderLabel(profile?.gender)
+  const collaborationGoalLabels = (profile?.collaborationGoals ?? []).map(getCollaborationGoalLabel)
   const availabilitySummary = formatAvailabilitySummary(
     profile?.availabilityPeriods ?? [],
     profile?.availabilityTimes ?? [],
@@ -70,7 +72,7 @@ export function MusicianProfilePage() {
     <>
       <PageHeader
         title={profile?.displayName ?? 'Perfil do músico'}
-        description="Conheça o som, a trajetória e os caminhos de colaboração"
+        description="Confira as informações do perfil e conecte-se para começar uma colaboração."
         action={
           <Link
             className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-3 text-sm font-bold text-zinc-100 transition hover:bg-zinc-800"
@@ -106,12 +108,12 @@ export function MusicianProfilePage() {
         <section className="grid gap-6 xl:grid-cols-[360px_1fr]">
           <aside className="space-y-6">
             <article className="rounded-lg border border-zinc-800 bg-[#181818] p-5 shadow-sm shadow-black/30">
-              <div className="flex aspect-square items-center justify-center rounded-lg bg-gradient-to-br from-[#1DC95A] via-[#18592F] to-[#141414] text-white">
-                <div className="flex flex-col items-center gap-3 rounded-lg bg-black/25 px-8 py-7 backdrop-blur-sm">
-                  <Sparkles size={52} />
-                  <span className="text-sm font-bold">{capitalizeDisplayName(mainInstrument)}</span>
-                </div>
-              </div>
+              <ProfileAvatar
+                label={capitalizeDisplayName(mainInstrument)}
+                name={profile.displayName}
+                seed={profile.userId}
+                variant="profile"
+              />
               <h2 className="mt-5 text-2xl font-bold text-white">{profile.displayName}</h2>
               <div className="mt-4 space-y-3 text-sm text-zinc-300">
                 <p className="flex items-center gap-2">
@@ -161,6 +163,10 @@ export function MusicianProfilePage() {
           <div className="space-y-6">
             <ProfileSection title="Sobre" icon={<Target className="text-[#1DC95A]" size={22} />}>
               <p className="text-lg leading-relaxed text-zinc-200">{about}</p>
+            </ProfileSection>
+
+            <ProfileSection title="Objetivos" icon={<Target className="text-[#1DC95A]" size={22} />}>
+              <TagList items={collaborationGoalLabels} emptyText="Nenhum objetivo informado" />
             </ProfileSection>
 
             <ProfileSection title="Instrumentos" icon={<Music className="text-[#1DC95A]" size={22} />}>

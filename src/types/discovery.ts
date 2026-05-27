@@ -1,4 +1,4 @@
-import type { Gender } from './profile'
+import type { AvailabilityPeriod, AvailabilityTime, CollaborationGoal, Gender } from './profile'
 
 export type DiscoveryMusicianResponse = {
   id: string
@@ -9,7 +9,11 @@ export type DiscoveryMusicianResponse = {
   age: number | null
   distanceKm: number | null
   experience: number | null
+  bio: string | null
   preferences: string | null
+  collaborationGoals: CollaborationGoal[]
+  availabilityPeriods: AvailabilityPeriod[]
+  availabilityTimes: AvailabilityTime[]
   instruments: string[]
   styles: string[]
 }

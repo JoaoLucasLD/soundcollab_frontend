@@ -2,10 +2,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, Check, Edit3, Guitar, MapPin, Music, Target, Trophy, X } from 'lucide-react'
+import { CalendarDays, Check, Edit3, MapPin, Music, Target, Trophy, X } from 'lucide-react'
 import { z } from 'zod'
 import { CityAutocomplete } from '../components/CityAutocomplete'
 import { PageHeader } from '../components/ui/PageHeader'
+import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { Tag } from '../components/ui/Tag'
 import { useInstruments, useStyles } from '../hooks/useCatalogs'
 import { currentUserQueryKey, useCurrentUser } from '../hooks/useCurrentUser'
@@ -409,11 +410,13 @@ export function ProfilePage() {
       <section className="grid gap-6 xl:grid-cols-[370px_1fr]">
         <div className="space-y-6">
           <article className="rounded-lg border border-zinc-800 bg-[#181818] p-6 text-center shadow-sm shadow-black/30">
-            <div className="mx-auto flex aspect-square w-full max-w-[320px] items-center justify-center rounded-lg bg-gradient-to-br from-[#1DC95A] via-[#18592F] to-[#141414] text-white">
-              <div className="flex flex-col items-center gap-4 rounded-lg bg-white/15 px-8 py-7 backdrop-blur-sm">
-                <Guitar size={56} />
-                <span className="text-sm font-bold">{mainInstrument}</span>
-              </div>
+            <div className="mx-auto w-full max-w-[320px]">
+              <ProfileAvatar
+                label={mainInstrument}
+                name={displayName}
+                seed={currentUser?.id ?? displayName}
+                variant="profile"
+              />
             </div>
 
             {inlineEditor === 'displayName'  ? (

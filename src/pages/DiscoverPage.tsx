@@ -8,6 +8,13 @@ import { useInstruments, useStyles } from '../hooks/useCatalogs'
 import { useCancelCollaboration, useCollaborations, useCreateCollaboration } from '../hooks/useCollaborations'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { useDiscoveryMusicians } from '../hooks/useDiscoveryMusicians'
+import {
+  availabilityPeriodOptions,
+  availabilityTimeOptions,
+  getAvailabilityPeriodLabel,
+  getAvailabilityTimeLabel,
+} from '../lib/availability'
+import { collaborationGoalOptions, getCollaborationGoalLabel } from '../lib/collaboration-goals'
 import { getCollaborationStateForUser, getPendingSentCollaborationForUser } from '../lib/collaboration-state'
 import { getGenderLabel } from '../lib/gender'
 import type { InstrumentCatalogItem } from '../types/catalog'
@@ -19,6 +26,9 @@ type DiscoveryAppliedFilters = {
   search: string
   instruments: string[]
   styles: string[]
+  goals: string[]
+  availabilityPeriods: string[]
+  availabilityTimes: string[]
   useDistance: boolean
   radiusKm: number
 }
@@ -32,6 +42,9 @@ const defaultDiscoveryFilters: DiscoveryAppliedFilters = {
   search: '',
   instruments: [],
   styles: [],
+  goals: [],
+  availabilityPeriods: [],
+  availabilityTimes: [],
   useDistance: false,
   radiusKm: 50,
 }
@@ -98,11 +111,20 @@ export function DiscoverPage() {
     () => catalogStyles.map((style) => style.name).sort(compareDisplayText),
     [catalogStyles],
   )
+  const goalOptions = useMemo(() => collaborationGoalOptions.map((goal) => goal.label), [])
+  const availabilityPeriodOptionsForFilter = useMemo(
+    () => availabilityPeriodOptions.map((period) => period.label),
+    [],
+  )
+  const availabilityTimeOptionsForFilter = useMemo(() => availabilityTimeOptions.map((time) => time.label), [])
 
   const filteredMusicians = useMemo(() => {
     const normalizedSearch = appliedFilters.search.trim().toLowerCase()
 
     return musicians.filter((musician) => {
+      const collaborationGoals = musician.collaborationGoals ?? []
+      const availabilityPeriods = musician.availabilityPeriods ?? []
+      const availabilityTimes = musician.availabilityTimes ?? []
       const searchableText = [
         musician.name,
         musician.city,
@@ -110,6 +132,9 @@ export function DiscoverPage() {
         musician.bio,
         ...musician.instruments,
         ...musician.styles,
+        ...collaborationGoals,
+        ...availabilityPeriods,
+        ...availabilityTimes,
       ]
         .join(' ')
         .toLowerCase()
@@ -121,8 +146,24 @@ export function DiscoverPage() {
       const matchesStyle =
         appliedFilters.styles.length === 0 ||
         appliedFilters.styles.some((style) => musician.styles.includes(style))
+      const matchesGoal =
+        appliedFilters.goals.length === 0 ||
+        appliedFilters.goals.some((goal) => collaborationGoals.includes(goal))
+      const matchesAvailabilityPeriod =
+        appliedFilters.availabilityPeriods.length === 0 ||
+        appliedFilters.availabilityPeriods.some((period) => availabilityPeriods.includes(period))
+      const matchesAvailabilityTime =
+        appliedFilters.availabilityTimes.length === 0 ||
+        appliedFilters.availabilityTimes.some((time) => availabilityTimes.includes(time))
 
-      return matchesSearch && matchesInstrument && matchesStyle
+      return (
+        matchesSearch &&
+        matchesInstrument &&
+        matchesStyle &&
+        matchesGoal &&
+        matchesAvailabilityPeriod &&
+        matchesAvailabilityTime
+      )
     })
   }, [appliedFilters, musicians])
 
@@ -130,6 +171,9 @@ export function DiscoverPage() {
     appliedFilters.search.trim().length > 0 ||
     appliedFilters.instruments.length > 0 ||
     appliedFilters.styles.length > 0 ||
+    appliedFilters.goals.length > 0 ||
+    appliedFilters.availabilityPeriods.length > 0 ||
+    appliedFilters.availabilityTimes.length > 0 ||
     (appliedFilters.useDistance && canUseDistanceFilter)
   const activeFilterCount = getAppliedFilterChips(appliedFilters, canUseDistanceFilter).length
 
@@ -168,6 +212,24 @@ export function DiscoverPage() {
 
     if (chip.type === 'style') {
       applyFilters({ ...appliedFilters, styles: appliedFilters.styles.filter((style) => style !== chip.value) })
+    }
+
+    if (chip.type === 'goal') {
+      applyFilters({ ...appliedFilters, goals: appliedFilters.goals.filter((goal) => goal !== chip.value) })
+    }
+
+    if (chip.type === 'availabilityPeriod') {
+      applyFilters({
+        ...appliedFilters,
+        availabilityPeriods: appliedFilters.availabilityPeriods.filter((period) => period !== chip.value),
+      })
+    }
+
+    if (chip.type === 'availabilityTime') {
+      applyFilters({
+        ...appliedFilters,
+        availabilityTimes: appliedFilters.availabilityTimes.filter((time) => time !== chip.value),
+      })
     }
 
     if (chip.type === 'distance') {
@@ -287,7 +349,10 @@ export function DiscoverPage() {
       {isFilterDialogOpen ? (
         <FilterDialog
           appliedFilters={appliedFilters}
+          availabilityPeriodOptions={availabilityPeriodOptionsForFilter}
+          availabilityTimeOptions={availabilityTimeOptionsForFilter}
           canUseDistanceFilter={canUseDistanceFilter}
+          goalOptions={goalOptions}
           instrumentItems={catalogInstruments}
           onApply={(filters) => {
             applyFilters(filters)
@@ -386,7 +451,10 @@ function mapDiscoveryItemToMusician(item: DiscoveryMusicianResponse, index: numb
     experience: formatExperience(item.experience),
     instruments: item.instruments,
     styles: item.styles,
-    bio: item.preferences || 'Perfil musical em construção.',
+    collaborationGoals: (item.collaborationGoals ?? []).map(getCollaborationGoalLabel),
+    availabilityPeriods: (item.availabilityPeriods ?? []).map(getAvailabilityPeriodLabel),
+    availabilityTimes: (item.availabilityTimes ?? []).map(getAvailabilityTimeLabel),
+    bio: item.bio  || 'Perfil musical em construção.',
     photoTone: photoTones[index % photoTones.length],
     photoLabel: mainInstrument,
   }
@@ -407,7 +475,7 @@ function formatExperience(experience: number | null) {
 type AppliedFilterChip = {
   id: string
   label: string
-  type: 'search' | 'instrument' | 'style' | 'distance'
+  type: 'search' | 'instrument' | 'style' | 'goal' | 'availabilityPeriod' | 'availabilityTime' | 'distance'
   value?: string
 }
 
@@ -517,7 +585,10 @@ function AppliedFilters({ canUseDistanceFilter, filters, onClear, onRemove }: Ap
 
 type FilterDialogProps = {
   appliedFilters: DiscoveryAppliedFilters
+  availabilityPeriodOptions: string[]
+  availabilityTimeOptions: string[]
   canUseDistanceFilter: boolean
+  goalOptions: string[]
   instrumentItems: InstrumentCatalogItem[]
   onApply: (filters: DiscoveryAppliedFilters) => void
   onClose: () => void
@@ -526,7 +597,10 @@ type FilterDialogProps = {
 
 function FilterDialog({
   appliedFilters,
+  availabilityPeriodOptions,
+  availabilityTimeOptions,
   canUseDistanceFilter,
+  goalOptions,
   instrumentItems,
   onApply,
   onClose,
@@ -572,6 +646,27 @@ function FilterDialog({
     setDraftFilters((currentFilters) => ({
       ...currentFilters,
       styles: toggleString(currentFilters.styles, style),
+    }))
+  }
+
+  function toggleGoal(goal: string) {
+    setDraftFilters((currentFilters) => ({
+      ...currentFilters,
+      goals: toggleString(currentFilters.goals, goal),
+    }))
+  }
+
+  function toggleAvailabilityPeriod(period: string) {
+    setDraftFilters((currentFilters) => ({
+      ...currentFilters,
+      availabilityPeriods: toggleString(currentFilters.availabilityPeriods, period),
+    }))
+  }
+
+  function toggleAvailabilityTime(time: string) {
+    setDraftFilters((currentFilters) => ({
+      ...currentFilters,
+      availabilityTimes: toggleString(currentFilters.availabilityTimes, time),
     }))
   }
 
@@ -633,6 +728,32 @@ function FilterDialog({
               options={styleOptions}
               selectedOptions={draftFilters.styles}
             />
+
+            <MultiFilterSection
+              emptyText="Nenhum objetivo cadastrado"
+              label="Objetivos"
+              onToggle={toggleGoal}
+              options={goalOptions}
+              selectedOptions={draftFilters.goals}
+            />
+
+            <div className="grid gap-5 lg:grid-cols-2">
+              <MultiFilterSection
+                emptyText="Nenhum período cadastrado"
+                label="Disponibilidade por período"
+                onToggle={toggleAvailabilityPeriod}
+                options={availabilityPeriodOptions}
+                selectedOptions={draftFilters.availabilityPeriods}
+              />
+
+              <MultiFilterSection
+                emptyText="Nenhum turno cadastrado"
+                label="Disponibilidade por turno"
+                onToggle={toggleAvailabilityTime}
+                options={availabilityTimeOptions}
+                selectedOptions={draftFilters.availabilityTimes}
+              />
+            </div>
 
           </div>
         </div>
@@ -776,6 +897,9 @@ function parseDiscoveryFilters(searchParams: URLSearchParams): DiscoveryAppliedF
     search: searchParams.get('q') ?? '',
     instruments: searchParams.getAll('instrument').filter(Boolean),
     styles: searchParams.getAll('style').filter(Boolean),
+    goals: searchParams.getAll('goal').filter(Boolean),
+    availabilityPeriods: searchParams.getAll('availabilityPeriod').filter(Boolean),
+    availabilityTimes: searchParams.getAll('availabilityTime').filter(Boolean),
     useDistance: searchParams.get('distance') === '1',
     radiusKm: Number.isFinite(radiusKm) ? clampRadiusKm(radiusKm) : defaultDiscoveryFilters.radiusKm,
   }
@@ -794,6 +918,18 @@ function createDiscoverySearchParams(filters: DiscoveryAppliedFilters) {
 
   for (const style of filters.styles) {
     params.append('style', style)
+  }
+
+  for (const goal of filters.goals) {
+    params.append('goal', goal)
+  }
+
+  for (const period of filters.availabilityPeriods) {
+    params.append('availabilityPeriod', period)
+  }
+
+  for (const time of filters.availabilityTimes) {
+    params.append('availabilityTime', time)
   }
 
   if (filters.useDistance) {
@@ -829,6 +965,33 @@ function getAppliedFilterChips(filters: DiscoveryAppliedFilters, canUseDistanceF
     })),
   )
 
+  chips.push(
+    ...filters.goals.map((goal) => ({
+      id: `goal-${goal}`,
+      label: `Objetivo: ${goal}`,
+      type: 'goal' as const,
+      value: goal,
+    })),
+  )
+
+  chips.push(
+    ...filters.availabilityPeriods.map((period) => ({
+      id: `availability-period-${period}`,
+      label: `Disponibilidade: ${period}`,
+      type: 'availabilityPeriod' as const,
+      value: period,
+    })),
+  )
+
+  chips.push(
+    ...filters.availabilityTimes.map((time) => ({
+      id: `availability-time-${time}`,
+      label: `Turno: ${time}`,
+      type: 'availabilityTime' as const,
+      value: time,
+    })),
+  )
+
   if (filters.useDistance && canUseDistanceFilter) {
     chips.push({ id: 'distance', label: `Distância: até ${filters.radiusKm} km`, type: 'distance' })
   }
@@ -842,7 +1005,10 @@ function areDiscoveryFiltersEqual(firstFilters: DiscoveryAppliedFilters, secondF
     firstFilters.useDistance === secondFilters.useDistance &&
     firstFilters.radiusKm === secondFilters.radiusKm &&
     areStringArraysEqual(firstFilters.instruments, secondFilters.instruments) &&
-    areStringArraysEqual(firstFilters.styles, secondFilters.styles)
+    areStringArraysEqual(firstFilters.styles, secondFilters.styles) &&
+    areStringArraysEqual(firstFilters.goals, secondFilters.goals) &&
+    areStringArraysEqual(firstFilters.availabilityPeriods, secondFilters.availabilityPeriods) &&
+    areStringArraysEqual(firstFilters.availabilityTimes, secondFilters.availabilityTimes)
   )
 }
 
