@@ -88,10 +88,8 @@ export function DiscoverPage() {
   }, [searchParams, setSearchParams])
 
   const discoveryFilters = useMemo(
-    () => ({
-      ...(appliedFilters.useDistance && canUseDistanceFilter ?{ radiusKm: appliedFilters.radiusKm } : {}),
-    }),
-    [appliedFilters.radiusKm, appliedFilters.useDistance, canUseDistanceFilter],
+    () => ({}),
+    [],
   )
 
   const {
@@ -439,6 +437,7 @@ export function DiscoverPage() {
 
 function mapDiscoveryItemToMusician(item: DiscoveryMusicianResponse, index: number): Musician {
   const mainInstrument = item.instruments[0] ?? 'Música'
+  const bio = item.bio || item.preferences || ''
 
   return {
     id: item.id,
@@ -454,7 +453,7 @@ function mapDiscoveryItemToMusician(item: DiscoveryMusicianResponse, index: numb
     collaborationGoals: (item.collaborationGoals ?? []).map(getCollaborationGoalLabel),
     availabilityPeriods: (item.availabilityPeriods ?? []).map(getAvailabilityPeriodLabel),
     availabilityTimes: (item.availabilityTimes ?? []).map(getAvailabilityTimeLabel),
-    bio: item.bio  || 'Perfil musical em construção.',
+    bio,
     photoTone: photoTones[index % photoTones.length],
     photoLabel: mainInstrument,
   }
@@ -1041,4 +1040,3 @@ function filterChoiceClassName(isSelected: boolean) {
 function compareDisplayText(firstText: string, secondText: string) {
   return firstText.localeCompare(secondText, 'pt-BR')
 }
-

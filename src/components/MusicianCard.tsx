@@ -85,7 +85,9 @@ export function MusicianCard({
           </div>
         ) : null}
 
-        <p className="min-h-12 text-sm leading-relaxed text-zinc-200">{musician.bio}</p>
+        {musician.bio.trim() ? (
+          <p className="min-h-12 text-sm leading-relaxed text-zinc-200">{musician.bio}</p>
+        ) : null}
 
         <div className="mt-auto grid grid-cols-2 gap-2 pt-2">
           <Link

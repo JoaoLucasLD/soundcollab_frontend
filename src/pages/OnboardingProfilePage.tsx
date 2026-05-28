@@ -9,6 +9,7 @@ import { CityAutocomplete } from '../components/CityAutocomplete'
 import { InstrumentCategoryPicker } from '../components/InstrumentCategoryPicker'
 import { useInstruments, useStyles } from '../hooks/useCatalogs'
 import { currentUserQueryKey, useCurrentUser } from '../hooks/useCurrentUser'
+import { discoveryMusiciansQueryKey } from '../hooks/useDiscoveryMusicians'
 import { availabilityPeriodOptions, availabilityTimeOptions } from '../lib/availability'
 import { formatBirthDateForDisplay, formatBirthDateInput, parseBirthDateDisplay, validateBirthDateAge } from '../lib/birth-date'
 import { collaborationGoalOptions } from '../lib/collaboration-goals'
@@ -178,6 +179,7 @@ export function OnboardingProfilePage() {
     },
     onSuccess: (freshUser) => {
       queryClient.setQueryData(currentUserQueryKey, freshUser)
+      queryClient.invalidateQueries({ queryKey: discoveryMusiciansQueryKey })
       navigate('/descobrir', { replace: true })
     },
     onError: (error) => {

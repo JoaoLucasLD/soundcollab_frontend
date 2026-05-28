@@ -10,6 +10,7 @@ import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { Tag } from '../components/ui/Tag'
 import { useInstruments, useStyles } from '../hooks/useCatalogs'
 import { currentUserQueryKey, useCurrentUser } from '../hooks/useCurrentUser'
+import { discoveryMusiciansQueryKey } from '../hooks/useDiscoveryMusicians'
 import {
   availabilityPeriodOptions,
   availabilityTimeOptions,
@@ -161,6 +162,7 @@ export function ProfilePage() {
     },
     onSuccess: (freshUser) => {
       queryClient.setQueryData<CurrentUser>(currentUserQueryKey, freshUser)
+      queryClient.invalidateQueries({ queryKey: discoveryMusiciansQueryKey })
       setInlineEditor(null)
       setSelectionModal(null)
       setFormError(null)
