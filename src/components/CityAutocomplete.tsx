@@ -50,10 +50,10 @@ export function CityAutocomplete({
         if (isCurrent) {
           setSuggestions(nextSuggestions)
         }
-      } catch (searchError) {
+      } catch {
         if (isCurrent) {
           setSuggestions([])
-          setError(searchError instanceof Error ? searchError.message : 'Não foi possível buscar cidades agora.')
+          setError('Não foi possível buscar cidades agora.')
         }
       } finally {
         if (isCurrent) {
@@ -140,9 +140,6 @@ type HelperMessageInput = {
 }
 
 function getHelperMessage({ error, isLoading, isSearching, suggestionsCount }: HelperMessageInput) {
-  if (!isMapboxConfigured()) {
-    return 'Configure VITE_MAPBOX_ACCESS_TOKEN para habilitar sugestões de cidade.'
-  }
 
   if (error) {
     return error

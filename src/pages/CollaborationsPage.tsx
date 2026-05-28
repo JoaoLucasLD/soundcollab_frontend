@@ -63,7 +63,7 @@ export function CollaborationsPage() {
       {isError ? (
         <FeedbackState
           title="Não foi possível carregar as colaborações"
-          description="Verifique se o backend está rodando e tente novamente."
+          description="Aguarde um momento e tente novamente."
           action={
             <button
               className="rounded-lg bg-[#1DC95A] px-4 py-2.5 text-sm font-bold text-[#141414]"
