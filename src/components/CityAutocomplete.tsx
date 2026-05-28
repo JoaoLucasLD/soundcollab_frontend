@@ -1,7 +1,6 @@
 import { MapPin } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import {
-  isMapboxConfigured,
   searchMapboxCities,
   type MapboxCitySuggestion,
 } from '../lib/mapbox'

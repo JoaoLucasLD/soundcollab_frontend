@@ -74,10 +74,6 @@ export async function searchMapboxCities(query: string): Promise<MapboxCitySugge
   })
 }
 
-export function isMapboxConfigured() {
-  return Boolean(env.mapboxAccessToken)
-}
-
 function formatCityLabel(name?: string, placeFormatted?: string, fullAddress?: string) {
   const suffix = placeFormatted ?? fullAddress
 
