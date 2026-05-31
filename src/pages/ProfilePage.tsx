@@ -48,11 +48,11 @@ const availabilityPeriodValues = ['WEEKDAYS', 'WEEKENDS'] as const
 const availabilityTimeValues = ['MORNING', 'AFTERNOON', 'EVENING'] as const
 
 const displayNameSchema = z.object({
-  displayName: z.string().trim().min(2, 'Informe pelo menos 2 caracteres.').max(80, 'Use no m·ximo 80 caracteres.'),
+  displayName: z.string().trim().min(2, 'Informe pelo menos 2 caracteres.').max(80, 'Use no m√°ximo 80 caracteres.'),
 })
 
 const citySchema = z.object({
-  city: z.string().trim().max(120, 'Use no m·ximo 120 caracteres.').optional(),
+  city: z.string().trim().max(120, 'Use no m√°ximo 120 caracteres.').optional(),
 })
 
 const genderSchema = z.object({
@@ -63,19 +63,19 @@ const birthDateSchema = z.object({
   birthDate: z
     .string()
     .trim()
-    .refine(validateBirthDateAge, 'Informe uma data v·lida para idade entre 18 e 100 anos.'),
+    .refine(validateBirthDateAge, 'Informe uma data v√°lida para idade entre 18 e 100 anos.'),
 })
 
 const experienceSchema = z.object({
   experience: z.coerce
     .number()
-    .int('Informe um n˙mero inteiro.')
-    .min(0, 'A experiÍncia n„o pode ser negativa.')
-    .max(100, 'Informe atÈ 100 anos.'),
+    .int('Informe um n√∫mero inteiro.')
+    .min(0, 'A experi√™ncia n√£o pode ser negativa.')
+    .max(100, 'Informe at√© 100 anos.'),
 })
 
 const aboutSchema = z.object({
-  bio: z.string().trim().max(500, 'Use no m·ximo 500 caracteres.').optional(),
+  bio: z.string().trim().max(500, 'Use no m√°ximo 500 caracteres.').optional(),
 })
 
 const goalsSchema = z.object({
@@ -85,15 +85,15 @@ const goalsSchema = z.object({
 const availabilitySchema = z.object({
   availabilityPeriods: z.array(z.enum(availabilityPeriodValues)).max(2),
   availabilityTimes: z.array(z.enum(availabilityTimeValues)).max(3),
-  availabilityNotes: z.string().trim().max(300, 'Use no m·ximo 300 caracteres.').optional(),
+  availabilityNotes: z.string().trim().max(300, 'Use no m√°ximo 300 caracteres.').optional(),
 })
 
 const instrumentsSchema = z.object({
-  instrumentIds: z.array(z.string()).max(20, 'Escolha atÈ 20 instrumentos.'),
+  instrumentIds: z.array(z.string()).max(20, 'Escolha at√© 20 instrumentos.'),
 })
 
 const stylesSchema = z.object({
-  styleIds: z.array(z.string()).max(20, 'Escolha atÈ 20 estilos.'),
+  styleIds: z.array(z.string()).max(20, 'Escolha at√© 20 estilos.'),
 })
 
 type InlineEditor = 'displayName' | 'city' | 'gender' | 'birthDate' | 'experience' | 'about' | null
@@ -128,22 +128,22 @@ export function ProfilePage() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const profile = currentUser?.profile
-  const displayName = profile?.displayName || currentUser?.email || 'VocÍ'
-  const city = profile?.city || 'LocalizaÁ„o n„o informada'
+  const displayName = profile?.displayName || currentUser?.email || 'Voc√™'
+  const city = profile?.city || 'Localiza√ß√£o n√£o informada'
   const hasCityCoordinates = typeof profile?.latitude === 'number' && typeof profile?.longitude === 'number'
   const gender = getGenderLabel(profile?.gender)
   const age = profile?.age
   const experienceYears = profile?.experience
   const instruments = profile?.instruments ?? []
   const styles = profile?.styles ?? []
-  const about = profile?.bio || profile?.preferences || 'Conte um pouco sobre sua trajetÛria musical.'
+  const about = profile?.bio || profile?.preferences || 'Conte um pouco sobre sua trajet√≥ria musical.'
   const collaborationGoalLabels = (profile?.collaborationGoals ?? []).map(getCollaborationGoalLabel)
   const availabilitySummary = formatAvailabilitySummary(
     profile?.availabilityPeriods ?? [],
     profile?.availabilityTimes ?? [],
     profile?.availabilityNotes,
   )
-  const mainInstrument = instruments[0] ? capitalizeDisplayName(instruments[0]) : 'M˙sica'
+  const mainInstrument = instruments[0] ? capitalizeDisplayName(instruments[0]) : 'M√∫sica'
 
   const saveMutation = useMutation({
     mutationFn: async (request: SaveRequest) => {
@@ -170,8 +170,8 @@ export function ProfilePage() {
     },
     onError: (error) => {
       const message = axios.isAxiosError(error)
-        ? error.response?.data?.message ?? 'N„o foi possÌvel salvar o perfil.'
-        : 'N„o foi possÌvel salvar o perfil agora.'
+        ? error.response?.data?.message ?? 'N√£o foi poss√≠vel salvar o perfil.'
+        : 'N√£o foi poss√≠vel salvar o perfil agora.'
 
       setFormError(message)
     },
@@ -281,7 +281,7 @@ export function ProfilePage() {
     const result = genderSchema.safeParse({ gender: genderValue })
 
     if (!result.success) {
-      setFormError('Selecione um gÍnero v·lido.')
+      setFormError('Selecione um g√™nero v√°lido.')
       return
     }
 
@@ -303,7 +303,7 @@ export function ProfilePage() {
     const result = experienceSchema.safeParse({ experience: experienceValue })
 
     if (!result.success) {
-      setFormError(result.error.issues[0]?.message ?? 'Revise os anos de experiÍncia.')
+      setFormError(result.error.issues[0]?.message ?? 'Revise os anos de experi√™ncia.')
       return
     }
 
@@ -408,7 +408,7 @@ export function ProfilePage() {
 
   return (
     <>
-      <PageHeader title="Meu Perfil" description="Gerencie suas informaÁıes musicais por seÁ„o" />
+      <PageHeader title="Meu Perfil" description="Gerencie suas informa√ß√µes musicais por se√ß√£o" />
 
       <section className="grid gap-6 xl:grid-cols-[370px_1fr]">
         <div className="space-y-6">
@@ -433,7 +433,7 @@ export function ProfilePage() {
                   <input
                     className={inputClassName}
                     onChange={(event) => setDisplayNameValue(event.target.value)}
-                    placeholder="Como vocÍ quer aparecer"
+                    placeholder="Como voc√™ quer aparecer"
                     value={displayNameValue}
                   />
                 </FormField>
@@ -450,9 +450,9 @@ export function ProfilePage() {
           </article>
 
           <ProfileInfoCard
-            action={<IconButton ariaLabel="Editar localizaÁ„o" onClick={() => openInlineEditor('city')} />}
+            action={<IconButton ariaLabel="Editar localiza√ß√£o" onClick={() => openInlineEditor('city')} />}
             icon={<MapPin className="text-[#1DC95A]" size={22} />}
-            title="LocalizaÁ„o"
+            title="Localiza√ß√£o"
           >
             {inlineEditor === 'city'  ? (
               <InlineEditorPanel error={formError} isSaving={isSaving} onCancel={closeInlineEditor} onSave={saveCity}>
@@ -469,11 +469,11 @@ export function ProfilePage() {
                       setCityLatitudeValue(city.latitude)
                       setCityLongitudeValue(city.longitude)
                     }}
-                    placeholder="S„o Paulo, SP"
+                    placeholder="S√£o Paulo, SP"
                     value={cityValue}
                   />
                   <p className="mt-2 text-sm text-zinc-400">
-                    Selecione uma sugest„o para atualizar as coordenadas usadas no filtro por dist‚ncia.
+                    Selecione uma sugest√£o para atualizar as coordenadas usadas no filtro por dist√¢ncia.
                   </p>
                 </FormField>
                 <button
@@ -482,7 +482,7 @@ export function ProfilePage() {
                   onClick={removeCity}
                   type="button"
                 >
-                  Remover localizaÁ„o
+                  Remover localiza√ß√£o
                 </button>
               </InlineEditorPanel>
             ) : (
@@ -490,8 +490,8 @@ export function ProfilePage() {
                 <p>{city}</p>
                 <p className="mt-2 text-sm text-zinc-400">
                   {hasCityCoordinates
-                    ?'Cidade com coordenadas salva para filtros de dist‚ncia.'
-                    : 'Edite a cidade e selecione uma sugest„o para liberar o filtro por quilÙmetros.'}
+                    ?'Cidade com coordenadas salva para filtros de dist√¢ncia.'
+                    : 'Edite a cidade e selecione uma sugest√£o para liberar o filtro por quil√¥metros.'}
                 </p>
                 {formError && inlineEditor === null  ? (
                   <div className="mt-3 rounded-lg border border-red-400/30 bg-red-950/40 px-3 py-2 text-sm text-red-200">
@@ -503,13 +503,13 @@ export function ProfilePage() {
           </ProfileInfoCard>
 
           <ProfileInfoCard
-            action={<IconButton ariaLabel="Editar gÍnero" onClick={() => openInlineEditor('gender')} />}
+            action={<IconButton ariaLabel="Editar g√™nero" onClick={() => openInlineEditor('gender')} />}
             icon={<Target className="text-[#1DC95A]" size={22} />}
-            title="GÍnero"
+            title="G√™nero"
           >
             {inlineEditor === 'gender'  ? (
               <InlineEditorPanel error={formError} isSaving={isSaving} onCancel={closeInlineEditor} onSave={saveGender}>
-                <FormField label="GÍnero">
+                <FormField label="G√™nero">
                   <select
                     className={inputClassName}
                     onChange={(event) => setGenderValue(event.target.value as Gender)}
@@ -555,14 +555,14 @@ export function ProfilePage() {
             ) : typeof age === 'number'  ? (
               <p>{age} anos</p>
             ) : (
-              <p className="text-zinc-400">Idade ainda n„o informada</p>
+              <p className="text-zinc-400">Idade ainda n√£o informada</p>
             )}
           </ProfileInfoCard>
 
           <ProfileInfoCard
-            action={<IconButton ariaLabel="Editar experiÍncia musical" onClick={() => openInlineEditor('experience')} />}
+            action={<IconButton ariaLabel="Editar experi√™ncia musical" onClick={() => openInlineEditor('experience')} />}
             icon={<Trophy className="text-[#1DC95A]" size={22} />}
-            title="ExperiÍncia Musical"
+            title="Experi√™ncia Musical"
           >
             {inlineEditor === 'experience'  ? (
               <InlineEditorPanel
@@ -571,7 +571,7 @@ export function ProfilePage() {
                 onCancel={closeInlineEditor}
                 onSave={saveExperience}
               >
-                <FormField label="Anos de experiÍncia">
+                <FormField label="Anos de experi√™ncia">
                   <input
                     className={inputClassName}
                     max={100}
@@ -587,7 +587,7 @@ export function ProfilePage() {
                 <p>{experienceYears} anos</p>
               </>
             ) : (
-              <p className="text-zinc-400">ExperiÍncia ainda n„o informada</p>
+              <p className="text-zinc-400">Experi√™ncia ainda n√£o informada</p>
             )}
           </ProfileInfoCard>
         </div>
@@ -596,7 +596,7 @@ export function ProfilePage() {
           <ProfileSection
             action={<IconButton ariaLabel="Editar sobre mim" onClick={() => openInlineEditor('about')} />}
             title="Sobre Mim"
-            description="Conte um pouco sobre vocÍ e sua trajetÛria musical"
+            description="Conte um pouco sobre voc√™ e sua trajet√≥ria musical"
           >
             {inlineEditor === 'about'  ? (
               <InlineEditorPanel error={formError} isSaving={isSaving} onCancel={closeInlineEditor} onSave={saveAbout}>
@@ -604,7 +604,7 @@ export function ProfilePage() {
                   <textarea
                     className="min-h-32 w-full resize-y rounded-lg border border-zinc-700 bg-[#141414] px-3 py-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-[#1DC95A] focus:ring-2 focus:ring-[#1DC95A]/20"
                     onChange={(event) => setBioValue(event.target.value)}
-                    placeholder="Conte sobre sua trajetÛria musical"
+                    placeholder="Conte sobre sua trajet√≥ria musical"
                     value={bioValue}
                   />
                 </FormField>
@@ -618,7 +618,7 @@ export function ProfilePage() {
             action={<EditButton label="Editar" onClick={() => openSelectionModal('instruments')} />}
             icon={<Music className="text-[#1DC95A]" size={22} />}
             title="Instrumentos"
-            description="Instrumentos que vocÍ toca"
+            description="Instrumentos que voc√™ toca"
           >
             <TagList items={instruments.map(capitalizeDisplayName)} emptyText="Nenhum instrumento informado" />
           </ProfileSection>
@@ -627,7 +627,7 @@ export function ProfilePage() {
             action={<EditButton label="Editar" onClick={() => openSelectionModal('styles')} />}
             icon={<Music className="text-[#1DC95A]" size={22} />}
             title="Estilos Musicais"
-            description="Estilos que vocÍ toca"
+            description="Estilos que voc√™ toca"
           >
             <TagList items={styles} emptyText="Nenhum estilo informado" />
           </ProfileSection>
@@ -635,8 +635,8 @@ export function ProfilePage() {
           <ProfileSection
             action={<EditButton label="Editar" onClick={() => openSelectionModal('goals')} />}
             icon={<Target className="text-[#1DC95A]" size={22} />}
-            title="Objetivos de ColaboraÁ„o"
-            description="O que vocÍ est· procurando na plataforma"
+            title="Objetivos de Colabora√ß√£o"
+            description="O que voc√™ est√° procurando na plataforma"
           >
             <TagList items={collaborationGoalLabels} emptyText="Nenhum objetivo informado" />
           </ProfileSection>
@@ -645,7 +645,7 @@ export function ProfilePage() {
             action={<EditButton label="Editar" onClick={() => openSelectionModal('availability')} />}
             icon={<CalendarDays className="text-[#1DC95A]" size={22} />}
             title="Disponibilidade"
-            description="Quando vocÍ costuma estar disponÌvel para colaborar"
+            description="Quando voc√™ costuma estar dispon√≠vel para colaborar"
           >
             <div className="space-y-2 text-zinc-200">
               {availabilitySummary.map((item) => (
@@ -701,7 +701,7 @@ export function ProfilePage() {
           onClose={closeSelectionModal}
           onSave={saveGoals}
           title="Editar objetivos"
-          description="Informe quais tipos de colaboraÁ„o vocÍ est· procurando."
+          description="Informe quais tipos de colabora√ß√£o voc√™ est√° procurando."
         >
           <div className="grid gap-2 sm:grid-cols-2">
             {collaborationGoalOptions.map((goal) => {
@@ -730,7 +730,7 @@ export function ProfilePage() {
           onClose={closeSelectionModal}
           onSave={saveAvailability}
           title="Editar disponibilidade"
-          description="Informe os perÌodos e turnos em que vocÍ costuma estar disponÌvel."
+          description="Informe os per√≠odos e turnos em que voc√™ costuma estar dispon√≠vel."
         >
           <AvailabilitySelection
             notes={availabilityNotesValue}
@@ -899,7 +899,7 @@ function SelectionDialog({ children, description, error, isSaving, onClose, onSa
             type="button"
           >
             <Check size={16} />
-            {isSaving ? 'Salvando...' : 'Salvar alteraÁıes'}
+            {isSaving ? 'Salvando...' : 'Salvar altera√ß√µes'}
           </button>
         </footer>
       </section>
@@ -967,7 +967,7 @@ function AvailabilitySelection({
   return (
     <div className="grid gap-5">
       <section>
-        <h3 className="text-sm font-bold text-zinc-100">PerÌodos</h3>
+        <h3 className="text-sm font-bold text-zinc-100">Per√≠odos</h3>
         <div className="mt-3 flex flex-wrap gap-2">
           {availabilityPeriodOptions.map((period) => {
             const isSelected = selectedPeriods.includes(period.value)
@@ -1009,11 +1009,11 @@ function AvailabilitySelection({
       </section>
 
       <label className="block">
-        <span className="mb-2 block text-sm font-bold text-zinc-100">ObservaÁ„o</span>
+        <span className="mb-2 block text-sm font-bold text-zinc-100">Observa√ß√£o</span>
         <textarea
           className="min-h-28 w-full resize-y rounded-lg border border-zinc-700 bg-[#141414] px-3 py-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-[#1DC95A] focus:ring-2 focus:ring-[#1DC95A]/20"
           onChange={(event) => onNotesChange(event.target.value)}
-          placeholder="Ex.: durante a semana sÛ depois das 19h."
+          placeholder="Ex.: durante a semana s√≥ depois das 19h."
           value={notes}
         />
       </label>
@@ -1100,7 +1100,7 @@ function InstrumentSelection({
         <div className="rounded-lg border border-zinc-800 bg-[#141414] p-3">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h3 className="text-sm font-bold text-zinc-100">{capitalizeDisplayName(activeGroup.categoryName)}</h3>
-            <p className="text-xs text-zinc-500">{activeGroup.items.length} opÁıes</p>
+            <p className="text-xs text-zinc-500">{activeGroup.items.length} op√ß√µes</p>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
