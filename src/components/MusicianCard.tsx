@@ -89,7 +89,7 @@ export function MusicianCard({
           <p className="min-h-12 text-sm leading-relaxed text-zinc-200">{musician.bio}</p>
         ) : null}
 
-        <div className="mt-auto grid grid-cols-2 gap-2 pt-2">
+        <div className="mt-auto grid gap-2 pt-2 sm:grid-cols-2">
           <Link
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-zinc-700 bg-[#141414] px-4 py-3 text-sm font-bold text-zinc-100 transition hover:bg-zinc-800"
             to={musician.userId ? `/musicos/${musician.userId}` : '/descobrir'}
@@ -106,9 +106,9 @@ export function MusicianCard({
               Responder
             </Link>
           ) : collaborationState === 'PENDING_SENT' ? (
-            <div className="grid grid-cols-[1fr_auto] gap-2">
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2">
               <button
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1DC95A] px-4 py-3 text-sm font-bold text-[#141414] shadow-sm transition disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex min-w-0 items-center justify-center gap-2 rounded-lg bg-[#1DC95A] px-3 py-3 text-sm font-bold text-[#141414] shadow-sm transition disabled:cursor-not-allowed disabled:opacity-70"
                 disabled
                 type="button"
               >
