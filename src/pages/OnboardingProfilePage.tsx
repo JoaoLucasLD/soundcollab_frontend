@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronLeft, ChevronRight, Music } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm, type FieldPath, type UseFormRegister } from 'react-hook-form'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { CityAutocomplete } from '../components/CityAutocomplete'
 import { InstrumentCategoryPicker } from '../components/InstrumentCategoryPicker'
@@ -14,7 +14,6 @@ import { availabilityPeriodOptions, availabilityTimeOptions } from '../lib/avail
 import { formatBirthDateForDisplay, formatBirthDateInput, parseBirthDateDisplay, validateBirthDateAge } from '../lib/birth-date'
 import { collaborationGoalOptions } from '../lib/collaboration-goals'
 import { genderOptions } from '../lib/gender'
-import { isProfileComplete } from '../lib/profile-completion'
 import { capitalizeDisplayName } from '../lib/text-format'
 import { getMe } from '../services/auth.service'
 import { replaceMyInstruments, replaceMyStyles, updateMyProfile } from '../services/profile.service'
@@ -191,9 +190,6 @@ export function OnboardingProfilePage() {
     },
   })
 
-  if (isProfileComplete(currentUser?.profile)) {
-    return <Navigate to="/descobrir" replace />
-  }
 
   function applyValidationErrors(result: ReturnType<typeof onboardingSchema.safeParse>) {
     if (result.success) {
@@ -259,6 +255,10 @@ export function OnboardingProfilePage() {
   }
 
   function handleOnboardingSubmit(values: OnboardingFormValues) {
+    if (!isLastStep) {
+      return
+    }
+
     clearErrors()
 
     const result = onboardingSchema.safeParse(normalizeOnboardingBirthDate(values))
@@ -301,7 +301,7 @@ export function OnboardingProfilePage() {
         <form
           className="rounded-lg border border-zinc-800 bg-[#181818] p-5 shadow-lg shadow-black/30"
           noValidate
-          onSubmit={handleSubmit(handleOnboardingSubmit)}
+          onSubmit={(event) => event.preventDefault()}
         >
           <StepProgress activeStep={activeStep} />
 
@@ -442,7 +442,8 @@ export function OnboardingProfilePage() {
               <button
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1DC95A] px-5 py-3 text-sm font-bold text-[#141414] transition hover:bg-[#1CB352] disabled:cursor-not-allowed disabled:opacity-70"
                 disabled={completeProfileMutation.isPending || isLoadingInstruments || isLoadingStyles}
-                type="submit"
+                onClick={handleSubmit(handleOnboardingSubmit)}
+                type="button"
               >
                 <Check size={17} />
                 {completeProfileMutation.isPending ? 'Salvando...' : 'Concluir perfil'}

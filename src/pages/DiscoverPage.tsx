@@ -88,8 +88,10 @@ export function DiscoverPage() {
   }, [searchParams, setSearchParams])
 
   const discoveryFilters = useMemo(
-    () => ({}),
-    [],
+    () => ({
+      ...(appliedFilters.useDistance && canUseDistanceFilter ? { radiusKm: appliedFilters.radiusKm } : {}),
+    }),
+    [appliedFilters.radiusKm, appliedFilters.useDistance, canUseDistanceFilter],
   )
 
   const {
@@ -296,6 +298,8 @@ export function DiscoverPage() {
             : `${musicians.length} músicos recomendados para você`
         }
       />
+
+      <p className="mb-4 text-sm font-semibold text-zinc-400">Ordenado por compatibilidade</p>
 
       <section className="mb-6 rounded-lg border border-zinc-800 bg-[#181818] p-4 shadow-sm shadow-black/30">
         <div className="grid gap-4 lg:grid-cols-[minmax(240px,1fr)_auto_auto] lg:items-end">
