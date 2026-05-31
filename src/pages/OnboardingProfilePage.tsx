@@ -27,6 +27,7 @@ const collaborationGoalValues = [
   'PRODUCTION',
   'STUDY',
   'CASUAL_JAM',
+  'NETWORKING',
 ] as const
 const availabilityPeriodValues = ['WEEKDAYS', 'WEEKENDS'] as const
 const availabilityTimeValues = ['MORNING', 'AFTERNOON', 'EVENING'] as const
@@ -49,7 +50,7 @@ const onboardingSchema = z.object({
     .min(0, 'A experiência não pode ser negativa.')
     .max(100, 'Informe até 100 anos.'),
   bio: z.string().trim().max(500, 'Use no máximo 500 caracteres.').optional(),
-  collaborationGoals: z.array(z.enum(collaborationGoalValues)).max(7),
+  collaborationGoals: z.array(z.enum(collaborationGoalValues)).max(8),
   availabilityPeriods: z.array(z.enum(availabilityPeriodValues)).max(2),
   availabilityTimes: z.array(z.enum(availabilityTimeValues)).max(3),
   availabilityNotes: z.string().trim().max(300, 'Use no máximo 300 caracteres.').optional(),

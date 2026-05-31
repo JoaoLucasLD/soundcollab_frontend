@@ -8,6 +8,7 @@ export const collaborationGoalOptions = [
   { value: 'PRODUCTION', label: 'Produção musical' },
   { value: 'STUDY', label: 'Estudar e praticar' },
   { value: 'CASUAL_JAM', label: 'Jam casual' },
+  { value: 'NETWORKING', label: 'Networking' },
 ] satisfies Array<{ value: CollaborationGoal; label: string }>
 
 export function getCollaborationGoalLabel(goal: CollaborationGoal) {

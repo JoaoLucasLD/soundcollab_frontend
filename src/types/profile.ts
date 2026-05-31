@@ -6,6 +6,7 @@ export type CollaborationGoal =
   | 'PRODUCTION'
   | 'STUDY'
   | 'CASUAL_JAM'
+  | 'NETWORKING'
 
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY'
 
