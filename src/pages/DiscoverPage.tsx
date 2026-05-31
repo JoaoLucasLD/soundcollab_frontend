@@ -861,7 +861,7 @@ function DistanceFilter({
           aria-label="Raio em quilômetros"
           className="w-full accent-[#1DC95A] disabled:opacity-40"
           disabled={!canUseDistanceFilter || !isEnabled}
-          max={200}
+          max={900}
           min={5}
           onChange={(event) => onRadiusChange(Number(event.target.value))}
           step={5}
@@ -1029,7 +1029,7 @@ function toggleString(items: string[], item: string) {
 }
 
 function clampRadiusKm(radiusKm: number) {
-  return Math.min(200, Math.max(5, radiusKm))
+  return Math.min(900, Math.max(5, radiusKm))
 }
 
 function filterChoiceClassName(isSelected: boolean) {
