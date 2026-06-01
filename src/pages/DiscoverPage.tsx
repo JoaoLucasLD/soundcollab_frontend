@@ -387,7 +387,7 @@ export function DiscoverPage() {
       {isError  ? (
         <FeedbackState
           title="Não foi possível carregar a descoberta"
-          description="Verifique se o backend está rodando e tente novamente."
+          description="Um erro ocorreu.Aguarde e tente novamente mais tarde."
           action={
             <button
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1DC95A] px-4 py-2.5 text-sm font-bold text-[#141414] transition hover:bg-[#1CB352]"
